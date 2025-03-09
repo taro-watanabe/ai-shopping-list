@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate --schema ./db/schema.ts --out ./drizzle --dialect sqlite",
+    "db:push": "drizzle-kit push --schema ./db/schema.ts --driver durable-sqlite --dialect sqlite"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.67.2",
