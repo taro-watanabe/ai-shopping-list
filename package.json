@@ -6,22 +6,26 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate --schema ./db/schema.ts --out ./drizzle --dialect sqlite",
+    "db:push": "drizzle-kit push --schema ./db/schema.ts --driver durable-sqlite --dialect sqlite"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.67.2",
     "@types/better-sqlite3": "^7.6.12",
     "better-sqlite3": "^11.8.1",
+    "clsx": "^2.1.1",
     "drizzle-kit": "^0.30.5",
     "drizzle-orm": "^0.40.0",
     "next": "15.2.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/react": "^19",
+    "@types/react": "^19.0.10",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
     "typescript": "^5"
