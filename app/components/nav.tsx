@@ -12,6 +12,9 @@ export function Nav() {
             <Link href="/tags" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-white hover:text-gray-300">
               Tags
             </Link>
+            <Link href="/people" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-white hover:text-gray-300">
+              People
+            </Link>
           </div>
         </div>
       </div>

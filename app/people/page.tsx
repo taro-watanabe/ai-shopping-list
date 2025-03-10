@@ -3,13 +3,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-async function fetchTags() {
-  const response = await fetch("/api/tags");
+async function fetchPeople() {
+  const response = await fetch("/api/people");
   return response.json();
 }
 
-async function addTag({ name, color }: { name: string; color: string }) {
-  const response = await fetch("/api/tags", {
+async function addPerson({ name, color }: { name: string; color: string }) {
+  const response = await fetch("/api/people", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, color }),
@@ -17,48 +17,48 @@ async function addTag({ name, color }: { name: string; color: string }) {
   return response.json();
 }
 
-async function deleteTag(id: number) {
-  const response = await fetch(`/api/tags/${id}`, {
+async function deletePerson(id: number) {
+  const response = await fetch(`/api/people/${id}`, {
     method: "DELETE",
   });
   return response.json();
 }
 
-export default function TagsPage() {
+export default function PeoplePage() {
   const queryClient = useQueryClient();
-  const [newTagName, setNewTagName] = useState("");
-  const [newTagColor, setNewTagColor] = useState("ffffff");
+  const [newPersonName, setNewPersonName] = useState("");
+  const [newPersonColor, setNewPersonColor] = useState("ffffff");
 
-  const { data: tags = [], isLoading } = useQuery({
-    queryKey: ["tags"],
-    queryFn: fetchTags,
+  const { data: people = [], isLoading } = useQuery({
+    queryKey: ["people"],
+    queryFn: fetchPeople,
   });
 
   const addMutation = useMutation({
-    mutationFn: addTag,
+    mutationFn: addPerson,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tags"] });
-      setNewTagName("");
-      setNewTagColor("ffffff");
+      queryClient.invalidateQueries({ queryKey: ["people"] });
+      setNewPersonName("");
+      setNewPersonColor("ffffff");
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteTag,
+    mutationFn: deletePerson,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tags"] });
+      queryClient.invalidateQueries({ queryKey: ["people"] });
     },
   });
 
   return (
     <main className="p-4 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Tags</h1>
+      <h1 className="text-2xl font-bold mb-4">People</h1>
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (newTagName.trim() && newTagColor) {
-            addMutation.mutate({ name: newTagName, color: newTagColor });
+          if (newPersonName.trim() && newPersonColor) {
+            addMutation.mutate({ name: newPersonName, color: newPersonColor });
           }
         }}
         className="mb-4"
@@ -66,23 +66,23 @@ export default function TagsPage() {
         <div className="space-y-2">
           <input
             type="text"
-            value={newTagName}
-            onChange={(e) => setNewTagName(e.target.value)}
-            placeholder="Tag name"
+            value={newPersonName}
+            onChange={(e) => setNewPersonName(e.target.value)}
+            placeholder="Person name"
             className="w-full p-2 border rounded"
             required
           />
           <div className="flex gap-2">
             <input
               type="color"
-              value={`#${newTagColor}`}
-              onChange={(e) => setNewTagColor(e.target.value.slice(1))}
+              value={`#${newPersonColor}`}
+              onChange={(e) => setNewPersonColor(e.target.value.slice(1))}
               className="h-10 w-16 p-1 border rounded"
             />
             <input
               type="text"
-              value={newTagColor}
-              onChange={(e) => setNewTagColor(e.target.value)}
+              value={newPersonColor}
+              onChange={(e) => setNewPersonColor(e.target.value)}
               placeholder="Hex color"
               pattern="[a-fA-F0-9]{6}"
               className="w-full p-2 border rounded"
@@ -92,23 +92,23 @@ export default function TagsPage() {
             type="submit"
             className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
           >
-            Add Tag
+            Add Person
           </button>
         </div>
       </form>
 
       <ul className="space-y-2">
-        {tags.map((tag: { id: number; name: string; color: string }) => (
-          <li key={tag.id} className="flex items-center justify-between p-2 border rounded">
+        {people.map((person: { id: number; name: string; color: string }) => (
+          <li key={person.id} className="flex items-center justify-between p-2 border rounded">
             <div className="flex items-center gap-2">
               <span
                 className="w-4 h-4 rounded-full"
-                style={{ backgroundColor: `#${tag.color}` }}
+                style={{ backgroundColor: person.color }}
               />
-              <span>{tag.name}</span>
+              <span>{person.name}</span>
             </div>
             <button
-              onClick={() => deleteMutation.mutate(tag.id)}
+              onClick={() => deleteMutation.mutate(person.id)}
               className="text-red-500 hover:text-red-700"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

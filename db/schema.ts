@@ -7,10 +7,18 @@ export const tags = sqliteTable('tags', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().defaultNow(),
 });
 
+export const people = sqliteTable('people', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  color: text('color').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().defaultNow(),
+});
+
 export const items = sqliteTable('items', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
   checked: integer('checked', { mode: 'boolean' }).notNull().default(false),
   tagId: integer('tag_id').references(() => tags.id),
+  personId: integer('person_id').references(() => people.id),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().defaultNow(),
 });
