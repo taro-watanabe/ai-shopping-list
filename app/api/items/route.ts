@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         id: people.id,
         name: people.name,
         color: people.color
-      } : undefined
+      } : {}
     })
     .from(items)
     .leftJoin(tags, eq(items.tagId, tags.id))
