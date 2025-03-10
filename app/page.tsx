@@ -85,7 +85,7 @@ export default function Home() {
         />
         <div className="flex flex-col">
           <span className={item.checked ? "line-through" : ""}>{item.name}</span>
-          <span className="text-xs text-gray-500">
+          {/* <span className="text-xs text-gray-500">
             {(() => {
   const dateString = item.createdAt.split('T')[0];
   // Extract the year part after the '+' and convert to number
@@ -94,7 +94,7 @@ export default function Home() {
   const day = Number(dateString.split('-')[2]);
   return new Date(year, month - 1, day).toLocaleDateString();
 })()}
-          </span>
+          </span> */}
         </div>
       </div>
       {item.tag && (
