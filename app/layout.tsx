@@ -1,40 +1,38 @@
-'use client';
+"use client";
 
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+	variable: "--font-geist-sans",
+	subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+	variable: "--font-geist-mono",
+	subsets: ["latin"],
 });
+
+const inter = Inter({ subsets: ["latin"] });
 
 const queryClient = new QueryClient();
 
-import { Nav } from './components/nav';
+import { Nav } from "./components/nav";
 
 export default function RootLayout({
-  children,
+	children,
 }: Readonly<{
-  children: React.ReactNode;
+	children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <QueryClientProvider client={queryClient}>
-          <Nav />
-          <main className="pt-16">
-            {children}
-          </main>
-        </QueryClientProvider>
-      </body>
-    </html>
-  );
+	return (
+		<html lang="en">
+			<body className={inter.className}>
+				<QueryClientProvider client={queryClient}>
+					<Nav />
+					<main className="pt-16">{children}</main>
+				</QueryClientProvider>
+			</body>
+		</html>
+	);
 }

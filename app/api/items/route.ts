@@ -1,119 +1,170 @@
 import { db } from "@/db";
 import { items, tags, people } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray, or, and, type SQL } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const include = searchParams.get('include');
+	const { searchParams } = new URL(request.url);
+	const include = searchParams.get("include");
 
-  const query = db
-    .select({
-      id: items.id,
-      name: items.name,
-      checked: items.checked,
-      createdAt: items.createdAt,
-      tagId: items.tagId,
-      tag: {
-        id: tags.id,
-        name: tags.name,
-        color: tags.color
-      },
-      personId: items.personId,
-      person: include?.includes('person') ? {
-        id: people.id,
-        name: people.name,
-        color: people.color
-      } : undefined
-    })
-    .from(items)
-    .leftJoin(tags, eq(items.tagId, tags.id))
-    .leftJoin(people, eq(items.personId, people.id));
+	// Get filter parameters as arrays
+	const tagIds = searchParams
+		.getAll("tagId")
+		.map(Number)
+		.filter((id) => !Number.isNaN(id));
+	const personIds = searchParams
+		.getAll("personId")
+		.map(Number)
+		.filter((id) => !Number.isNaN(id));
 
-  const allItems = await query;
+	const query = db
+		.select({
+			id: items.id,
+			name: items.name,
+			checked: items.checked,
+			createdAt: items.createdAt,
+			checkedAt: items.checkedAt,
+			tagId: items.tagId,
+			tag: {
+				id: tags.id,
+				name: tags.name,
+				color: tags.color,
+			},
+			personId: items.personId,
+			person: include?.includes("person")
+				? {
+						id: people.id,
+						name: people.name,
+						color: people.color,
+					}
+				: {},
+			price: items.price,
+		})
+		.from(items)
+		.leftJoin(tags, eq(items.tagId, tags.id))
+		.leftJoin(people, eq(items.personId, people.id));
 
-  return NextResponse.json(allItems);
+	// Prepare filter conditions
+	const conditions: SQL[] = [];
+
+	// Add tag filter condition (OR between selected tags)
+	if (tagIds.length > 0) {
+		conditions.push(inArray(items.tagId, tagIds));
+	}
+
+	// Add person filter condition (OR between selected people)
+	if (personIds.length > 0) {
+		conditions.push(inArray(items.personId, personIds));
+	}
+
+	// Build final condition before applying where clause
+	let finalCondition: SQL | undefined;
+	if (conditions.length === 2) {
+		finalCondition = and(conditions[0], conditions[1]);
+	} else if (conditions.length === 1) {
+		finalCondition = conditions[0];
+	}
+
+	// Apply where clause only if there are conditions
+	const finalQuery = finalCondition ? query.where(finalCondition) : query;
+
+	const allItems = await finalQuery;
+
+	return NextResponse.json(allItems);
 }
 
 export async function POST(request: Request) {
-  const { name, tagId, personId } = await request.json();
+	const { name, tagId, personId } = await request.json();
 
-  const newItem = await db.insert(items).values({
-    name,
-    tagId: tagId ? Number(tagId) : null,
-    personId: personId ? Number(personId) : null
-  }).returning({
-    id: items.id,
-    name: items.name,
-    checked: items.checked,
-    createdAt: items.createdAt,
-    tagId: items.tagId,
-    personId: items.personId
-  });
+	const newItem = await db
+		.insert(items)
+		.values({
+			name,
+			tagId: tagId ? Number(tagId) : null,
+			personId: personId ? Number(personId) : null,
+		})
+		.returning({
+			id: items.id,
+			name: items.name,
+			checked: items.checked,
+			createdAt: items.createdAt,
+			tagId: items.tagId,
+			personId: items.personId,
+		});
 
-  return NextResponse.json(newItem[0]);
+	return NextResponse.json(newItem[0]);
 }
 
 export async function PUT(request: Request) {
-  try {
-    const body = await request.json();
-    const { id, checked, personId } = body;
+	try {
+		const body = await request.json();
+		const { id, checked, personId, price } = body;
 
-    const parsedId = Number(id);
-    if (Number.isNaN(parsedId) || typeof checked !== "boolean") {
-      return NextResponse.json(
-        { error: "Invalid request data" },
-        { status: 400 },
-      );
-    }
+		const parsedId = Number(id);
+		if (Number.isNaN(parsedId) || typeof checked !== "boolean") {
+			return NextResponse.json(
+				{ error: "Invalid request data" },
+				{ status: 400 },
+			);
+		}
 
-    const updateData = {
-      checked,
-      ...(personId && { personId: Number(personId) })
-    };
+		const updateData = {
+			checked,
+			...(personId && { personId: Number(personId) }),
+			...(price && { price: Number(price) }),
+			checkedAt: checked ? new Date().toISOString() : null,
+		};
 
-    const updatedItem = await db
-      .update(items)
-      .set(updateData)
-      .where(eq(items.id, parsedId))
-      .returning();
+		if (personId === 0) {
+			updateData.personId = null;
+		}
 
-    if (!updatedItem.length) {
-      return NextResponse.json({ error: "Item not found" }, { status: 404 });
-    }
+		if (!checked) {
+			updateData.price = null;
+			updateData.personId = null;
+			updateData.checkedAt = null;
+		}
 
-    return NextResponse.json(updatedItem[0]);
-  } catch (error) {
-    console.error("Error updating item:", error);
-    return NextResponse.json(
-      { error: "Failed to update item" },
-      { status: 500 },
-    );
-  }
+		const updatedItem = await db
+			.update(items)
+			.set(updateData)
+			.where(eq(items.id, parsedId))
+			.returning();
+
+		if (!updatedItem.length) {
+			return NextResponse.json({ error: "Item not found" }, { status: 404 });
+		}
+
+		return NextResponse.json(updatedItem[0]);
+	} catch (error) {
+		console.error("Error updating item:", error);
+		return NextResponse.json(
+			{ error: "Failed to update item" },
+			{ status: 500 },
+		);
+	}
 }
 
 export async function DELETE(request: Request) {
-  try {
-    const { id } = await request.json();
-    const parsedId = Number(id);
+	try {
+		const { id } = await request.json();
+		const parsedId = Number(id);
 
-    if (Number.isNaN(parsedId)) {
-      return NextResponse.json(
-        { error: "Invalid request data" },
-        { status: 400 },
-      );
-    }
+		if (Number.isNaN(parsedId)) {
+			return NextResponse.json(
+				{ error: "Invalid request data" },
+				{ status: 400 },
+			);
+		}
 
-    await db
-      .delete(items)
-      .where(eq(items.id, parsedId));
+		await db.delete(items).where(eq(items.id, parsedId));
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting item:", error);
-    return NextResponse.json(
-      { error: "Failed to delete item" },
-      { status: 500 },
-    );
-  }
+		return NextResponse.json({ success: true });
+	} catch (error) {
+		console.error("Error deleting item:", error);
+		return NextResponse.json(
+			{ error: "Failed to delete item" },
+			{ status: 500 },
+		);
+	}
 }
