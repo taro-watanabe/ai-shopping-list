@@ -16,6 +16,8 @@ const geistMono = Geist_Mono({
 
 const queryClient = new QueryClient();
 
+import { Nav } from './components/nav';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +29,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <QueryClientProvider client={queryClient}>
-          {children}
+          <Nav />
+          <main className="pt-16">
+            {children}
+          </main>
         </QueryClientProvider>
       </body>
     </html>
