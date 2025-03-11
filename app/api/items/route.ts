@@ -1,13 +1,23 @@
 import { db } from "@/db";
 import { items, tags, people } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray, or, and, type SQL } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
 	const { searchParams } = new URL(request.url);
 	const include = searchParams.get("include");
 
-	const query = db
+	// Get filter parameters as arrays
+	const tagIds = searchParams
+		.getAll("tagId")
+		.map(Number)
+		.filter((id) => !Number.isNaN(id));
+	const personIds = searchParams
+		.getAll("personId")
+		.map(Number)
+		.filter((id) => !Number.isNaN(id));
+
+	let query = db
 		.select({
 			id: items.id,
 			name: items.name,
@@ -33,7 +43,31 @@ export async function GET(request: Request) {
 		.leftJoin(tags, eq(items.tagId, tags.id))
 		.leftJoin(people, eq(items.personId, people.id));
 
-	const allItems = await query;
+	// Prepare filter conditions
+	const conditions: SQL[] = [];
+
+	// Add tag filter condition (OR between selected tags)
+	if (tagIds.length > 0) {
+		conditions.push(inArray(items.tagId, tagIds));
+	}
+
+	// Add person filter condition (OR between selected people)
+	if (personIds.length > 0) {
+		conditions.push(inArray(items.personId, personIds));
+	}
+
+	// Build final condition before applying where clause
+	let finalCondition: SQL | undefined;
+	if (conditions.length === 2) {
+		finalCondition = and(conditions[0], conditions[1]);
+	} else if (conditions.length === 1) {
+		finalCondition = conditions[0];
+	}
+
+	// Apply where clause only if there are conditions
+	const finalQuery = finalCondition ? query.where(finalCondition) : query;
+
+	const allItems = await finalQuery;
 
 	return NextResponse.json(allItems);
 }
@@ -78,6 +112,10 @@ export async function PUT(request: Request) {
 			...(personId && { personId: Number(personId) }),
 			...(price && { price: Number(price) }),
 		};
+
+		if (personId === 0) {
+			updateData.personId = null;
+		}
 
 		const updatedItem = await db
 			.update(items)

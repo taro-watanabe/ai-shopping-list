@@ -4,8 +4,30 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { PersonSelectModal } from "@/components/person-select-modal";
 
-async function fetchItems() {
-	const response = await fetch("/api/items?include=person");
+async function fetchItems({
+	include = "person",
+	tagIds = [],
+	personIds = [],
+}: {
+	include?: string;
+	tagIds?: number[];
+	personIds?: number[];
+}) {
+	// Build URL with multiple parameters
+	const url = new URL("/api/items", window.location.origin);
+	url.searchParams.append("include", include);
+
+	// Add multiple tagId parameters if any
+	for (const id of tagIds) {
+		url.searchParams.append("tagId", id.toString());
+	}
+
+	// Add multiple personId parameters if any
+	for (const id of personIds) {
+		url.searchParams.append("personId", id.toString());
+	}
+
+	const response = await fetch(url.toString());
 	return response.json();
 }
 
@@ -57,10 +79,17 @@ export default function Home() {
 	const [selectedTagId, setSelectedTagId] = useState<number | null>(null);
 	const [modalOpen, setModalOpen] = useState(false);
 	const [itemToCheck, setItemToCheck] = useState<number | null>(null);
+	const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+	const [selectedPersonIds, setSelectedPersonIds] = useState<number[]>([]);
 
+	// Update query to include filter parameters
 	const { data: items = [], isLoading: itemsLoading } = useQuery({
-		queryKey: ["items"],
-		queryFn: fetchItems,
+		queryKey: [
+			"items",
+			{ tagIds: selectedTagIds, personIds: selectedPersonIds },
+		],
+		queryFn: () =>
+			fetchItems({ tagIds: selectedTagIds, personIds: selectedPersonIds }),
 	});
 
 	const { data: tags = [], isLoading: tagsLoading } = useQuery({
@@ -116,6 +145,88 @@ export default function Home() {
 		}
 	};
 
+	const TagFilter = () => (
+		<div className="mb-4">
+			<h3 className="text-sm font-semibold mb-2">Tags</h3>
+			<div className="flex flex-wrap gap-2">
+				{tags.map((tag: { id: number; name: string; color: string }) => (
+					<button
+						type="button"
+						key={tag.id}
+						className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${
+							selectedTagIds.includes(tag.id)
+								? "bg-gray-200 border-gray-300 border"
+								: "bg-white border"
+						}`}
+						onClick={() => {
+							setSelectedTagIds((prev) =>
+								prev.includes(tag.id)
+									? prev.filter((id) => id !== tag.id)
+									: [...prev, tag.id],
+							);
+						}}
+					>
+						<span
+							className="w-3 h-3 rounded-full"
+							style={{ backgroundColor: `#${tag.color}` }}
+						/>
+						{tag.name}
+					</button>
+				))}
+				{selectedTagIds.length > 0 && (
+					<button
+						type="button"
+						onClick={() => setSelectedTagIds([])}
+						className="px-2 py-1 text-xs text-gray-600 underline"
+					>
+						Clear
+					</button>
+				)}
+			</div>
+		</div>
+	);
+
+	const PeopleFilter = () => (
+		<div className="mb-4">
+			<h3 className="text-sm font-semibold mb-2">People</h3>
+			<div className="flex flex-wrap gap-2">
+				{people.map((person: { id: number; name: string; color: string }) => (
+					<button
+						type="button"
+						key={person.id}
+						className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${
+							selectedPersonIds.includes(person.id)
+								? "bg-gray-200 border-gray-300 border"
+								: "bg-white border"
+						}`}
+						onClick={() => {
+							setSelectedPersonIds((prev) =>
+								prev.includes(person.id)
+									? prev.filter((id) => id !== person.id)
+									: [...prev, person.id],
+							);
+						}}
+					>
+						<span
+							className="w-3 h-3 rounded-full"
+							style={{ backgroundColor: `#${person.color}` }}
+						/>
+						{person.name}
+					</button>
+				))}
+				{selectedPersonIds.length > 0 && (
+					<button
+						type="button"
+						onClick={() => setSelectedPersonIds([])}
+						className="px-2 py-1 text-xs text-gray-600 underline"
+					>
+						Clear
+					</button>
+				)}
+			</div>
+		</div>
+	);
+
 	const renderItem = (item: {
 		id: number;
 		checked: boolean;
@@ -139,7 +250,7 @@ export default function Home() {
 							toggleMutation.mutate({
 								id: item.id,
 								checked: false,
-								personId: undefined,
+								personId: 0,
 								price: undefined,
 							});
 						}
@@ -199,6 +310,26 @@ export default function Home() {
 		</li>
 	);
 
+	// Calculate totals for both checked and unchecked items
+	const calculateTotal = (
+		items: { id: number; checked: boolean; name: string; price?: number }[],
+	) => {
+		return items
+			.filter((item) => item.price !== undefined && item.price !== null)
+			.reduce((sum, item) => sum + Number(item.price), 0);
+	};
+
+	const filteredUncheckedItems = items.filter(
+		(item: { checked: boolean }) => !item.checked,
+	);
+	const filteredCheckedItems = items.filter(
+		(item: { checked: boolean }) => item.checked,
+	);
+
+	const uncheckedTotal = calculateTotal(filteredUncheckedItems);
+	const checkedTotal = calculateTotal(filteredCheckedItems);
+	const grandTotal = uncheckedTotal + checkedTotal;
+
 	return (
 		<main className="p-4 max-w-md mx-auto">
 			<h1 className="text-2xl font-bold mb-4">Shopping List</h1>
@@ -242,19 +373,36 @@ export default function Home() {
 				</button>
 			</form>
 
-			<ul className="space-y-2">
-				{items
-					.filter((item: { checked: boolean }) => !item.checked)
-					.map(renderItem)}
-			</ul>
+			<div className="my-4 p-3 border rounded bg-gray-50">
+				<TagFilter />
+				<PeopleFilter />
+			</div>
+
+			<div className="mt-8 pt-4 border-t">
+				<h2 className="text-lg font-semibold mb-2">Pending Items</h2>
+				<ul className="space-y-2">{filteredUncheckedItems.map(renderItem)}</ul>
+			</div>
 
 			<div className="mt-8 pt-4 border-t">
 				<h2 className="text-lg font-semibold mb-2">Checked Items</h2>
-				<ul className="space-y-2">
-					{items
-						.filter((item: { checked: boolean }) => item.checked)
-						.map(renderItem)}
-				</ul>
+				<ul className="space-y-2">{filteredCheckedItems.map(renderItem)}</ul>
+			</div>
+
+			<div className="mt-8 pt-4 border-t">
+				<div className="bg-gray-50 p-4 rounded border">
+					<div className="flex justify-between items-center mb-2">
+						<span>Pending Items:</span>
+						<span className="font-medium">€{uncheckedTotal.toFixed(2)}</span>
+					</div>
+					<div className="flex justify-between items-center mb-2">
+						<span>Checked Items:</span>
+						<span className="font-medium">€{checkedTotal.toFixed(2)}</span>
+					</div>
+					<div className="flex justify-between items-center pt-2 border-t border-gray-300 mt-2">
+						<span className="font-semibold">Total:</span>
+						<span className="font-bold">€{grandTotal.toFixed(2)}</span>
+					</div>
+				</div>
 			</div>
 
 			<PersonSelectModal
