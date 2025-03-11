@@ -3,6 +3,7 @@ import {
 	text,
 	integer,
 	foreignKey,
+	real,
 } from "drizzle-orm/sqlite-core";
 
 export const tags = sqliteTable("tags", {
@@ -34,4 +35,5 @@ export const items = sqliteTable("items", {
 	createdAt: integer("created_at", { mode: "timestamp" })
 		.notNull()
 		.defaultNow(),
+	price: real("price"),
 });

@@ -32,11 +32,12 @@ async function toggleItem({
 	id,
 	checked,
 	personId,
-}: { id: number; checked: boolean; personId?: number }) {
+	price,
+}: { id: number; checked: boolean; personId?: number; price?: number }) {
 	const response = await fetch("/api/items", {
 		method: "PUT",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ id, checked, personId }),
+		body: JSON.stringify({ id, checked, personId, price }),
 	});
 	return response.json();
 }
@@ -101,12 +102,16 @@ export default function Home() {
 		setModalOpen(true);
 	};
 
-	const handlePersonSelect = (personId: number | null) => {
+	const handlePersonSelect = (
+		personId: number | null,
+		price: number | null,
+	) => {
 		if (itemToCheck) {
 			toggleMutation.mutate({
 				id: itemToCheck,
 				checked: true,
 				personId: personId ?? undefined,
+				price: price ?? undefined,
 			});
 		}
 	};
@@ -120,6 +125,7 @@ export default function Home() {
 		tag?: { id: number; name: string; color: string };
 		personId?: number;
 		person?: { id: number; name: string; color: string };
+		price?: number;
 	}) => (
 		<li key={item.id} className="flex items-center justify-between">
 			<div className="flex items-center">
@@ -134,6 +140,7 @@ export default function Home() {
 								id: item.id,
 								checked: false,
 								personId: undefined,
+								price: undefined,
 							});
 						}
 					}}
@@ -143,6 +150,11 @@ export default function Home() {
 					<span className={item.checked ? "line-through" : ""}>
 						{item.name}
 					</span>
+					{item.price && (
+						<span className="text-sm text-gray-600">
+							€{item.price.toFixed(2)}
+						</span>
+					)}
 				</div>
 			</div>
 			<div className="flex items-center gap-2">
