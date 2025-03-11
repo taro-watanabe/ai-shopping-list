@@ -18,8 +18,10 @@ async function addPerson({ name, color }: { name: string; color: string }) {
 }
 
 async function deletePerson(id: number) {
-  const response = await fetch(`/api/people/${id}`, {
-    method: "DELETE",
+  const response = await fetch('/api/people', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
   });
   return response.json();
 }
