@@ -1,6 +1,6 @@
 "use client";
 
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -14,6 +14,8 @@ const geistMono = Geist_Mono({
 	subsets: ["latin"],
 });
 
+const inter = Inter({ subsets: ["latin"] });
+
 const queryClient = new QueryClient();
 
 import { Nav } from "./components/nav";
@@ -25,9 +27,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body
-				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-			>
+			<body className={inter.className}>
 				<QueryClientProvider client={queryClient}>
 					<Nav />
 					<main className="pt-16">{children}</main>
