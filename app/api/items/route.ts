@@ -27,6 +27,7 @@ export async function GET(request: Request) {
 						color: people.color,
 					}
 				: {},
+			price: items.price,
 		})
 		.from(items)
 		.leftJoin(tags, eq(items.tagId, tags.id))
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
 	try {
 		const body = await request.json();
-		const { id, checked, personId } = body;
+		const { id, checked, personId, price } = body;
 
 		const parsedId = Number(id);
 		if (Number.isNaN(parsedId) || typeof checked !== "boolean") {
@@ -75,6 +76,7 @@ export async function PUT(request: Request) {
 		const updateData = {
 			checked,
 			...(personId && { personId: Number(personId) }),
+			...(price && { price: Number(price) }),
 		};
 
 		const updatedItem = await db

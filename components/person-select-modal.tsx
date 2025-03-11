@@ -16,79 +16,94 @@ function Modal({
 	);
 }
 
+interface Person {
+	id: number;
+	name: string;
+	color: string;
+}
+
 interface PersonSelectModalProps {
 	open: boolean;
 	onClose: () => void;
-	onSelect: (personId: number | null) => void;
-	people: Array<{ id: number; name: string; color: string }>;
+	onSelect: (personId: number | null, price: number | null) => void;
+	people: Person[];
 }
 
-export function PersonSelectModal({
+export const PersonSelectModal: React.FC<PersonSelectModalProps> = ({
 	open,
 	onClose,
 	onSelect,
 	people,
-}: PersonSelectModalProps) {
+}) => {
 	const [selectedPerson, setSelectedPerson] = useState<number | null>(null);
+	const [price, setPrice] = useState<string>("");
 
-	const handleSelect = () => {
-		onSelect(selectedPerson);
+	if (!open) return null;
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		const priceValue = price ? Number.parseFloat(price) : null;
+		onSelect(selectedPerson, priceValue);
 		onClose();
+		setSelectedPerson(null);
+		setPrice("");
+	};
+
+	const handlePersonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+		const value = e.target.value;
+		setSelectedPerson(value ? Number(value) : null);
 	};
 
 	return (
-		<Modal open={open} onClose={onClose}>
-			<div className="space-y-4">
-				<h2 className="text-lg font-semibold">Who Paid?</h2>
-				<div className="grid grid-cols-1 gap-2">
-					{people.map((person) => (
-						<div
-							key={person.id}
-							className={`flex items-center p-2 rounded cursor-pointer ${
-								selectedPerson === person.id
-									? "bg-gray-100"
-									: "hover:bg-gray-50"
-							}`}
-							onClick={() => setSelectedPerson(person.id)}
-							onKeyDown={(e) => {
-								if (e.key === "Enter" || e.key === " ") {
-									setSelectedPerson(person.id);
-								}
-							}}
-							tabIndex={0}
-							role="button"
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+			<div className="bg-white rounded-lg p-6 w-full max-w-md">
+				<h3 className="text-lg font-semibold mb-4">Mark Item as Bought/Completed</h3>
+				<form onSubmit={handleSubmit} className="space-y-4">
+					<div>
+							<select
+								id="person-select"
+								value={selectedPerson ?? ""}
+								onChange={handlePersonChange}
+								className="w-full p-2 border rounded"
+							>
+								<option value="">Who Paid? (Optional)</option>
+								{people.map((person) => (
+									<option key={person.id} value={person.id}>
+										{person.name}
+									</option>
+								))}
+							</select>
+					</div>
+
+					<div>
+						<input
+							type="number"
+							id="price"
+							value={price}
+							onChange={(e) => setPrice(e.target.value)}
+							placeholder="Enter price in EUR (Optional)"
+							step="0.01"
+							className="w-full p-2 border rounded"
+						/>
+					</div>
+
+					<div className="flex justify-end gap-2">
+						<button
+							type="button"
+							onClick={onClose}
+							className="px-4 py-2 border rounded hover:bg-gray-100"
 						>
-							<div
-								className="w-4 h-4 rounded-full mr-2"
-								style={{ backgroundColor: person.color }}
-							/>
-							<span>{person.name}</span>
-						</div>
-					))}
-				</div>
-				<div className="flex justify-end gap-2">
-					<button
-						onClick={onClose}
-						className="
-              px-4 py-2 text-sm font-medium text-gray-700 
-              bg-gray-100 rounded hover:bg-gray-200
-            "
-						type="button"
-					>
-						Cancel
-					</button>
-					<button
-						onClick={handleSelect}
-						className="
-              px-4 py-2 text-sm font-medium text-white 
-              bg-blue-500 rounded hover:bg-blue-600
-            "
-						type="button"
-					>
-						Select
-					</button>
-				</div>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+						>
+							Confirm
+						</button>
+					</div>
+				</form>
 			</div>
-		</Modal>
+		</div>
 	);
-}
+};
