@@ -57,22 +57,24 @@ export const PersonSelectModal: React.FC<PersonSelectModalProps> = ({
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
 			<div className="bg-white rounded-lg p-6 w-full max-w-md">
-				<h3 className="text-lg font-semibold mb-4">Mark Item as Bought/Completed</h3>
+				<h3 className="text-lg font-semibold mb-4">
+					Mark Item as Bought/Completed
+				</h3>
 				<form onSubmit={handleSubmit} className="space-y-4">
 					<div>
-							<select
-								id="person-select"
-								value={selectedPerson ?? ""}
-								onChange={handlePersonChange}
-								className="w-full p-2 border rounded"
-							>
-								<option value="">Who Paid? (Optional)</option>
-								{people.map((person) => (
-									<option key={person.id} value={person.id}>
-										{person.name}
-									</option>
-								))}
-							</select>
+						<select
+							id="person-select"
+							value={selectedPerson ?? ""}
+							onChange={handlePersonChange}
+							className="w-full p-2 border rounded"
+						>
+							<option value="">Who Paid? (Optional)</option>
+							{people.map((person) => (
+								<option key={person.id} value={person.id}>
+									{person.name}
+								</option>
+							))}
+						</select>
 					</div>
 
 					<div>
