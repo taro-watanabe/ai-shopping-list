@@ -232,6 +232,7 @@ export default function Home() {
 		checked: boolean;
 		name: string;
 		createdAt: string;
+		checkedAt: string;
 		tagId?: number;
 		tag?: { id: number; name: string; color: string };
 		personId?: number;
@@ -259,8 +260,15 @@ export default function Home() {
 				/>
 				<div className="flex flex-col">
 					<span className={item.checked ? "line-through" : ""}>
-						{item.name} <span className="text-xs text-gray-500 ml-2">
-							[{new Date(item.createdAt).toISOString().split('T')[0]}]
+						{item.name}{" "}
+						<span className="text-xs text-gray-500 ml-2">
+							[
+							{
+								new Date(item.checkedAt || item.createdAt)
+									.toISOString()
+									.split("T")[0]
+							}
+							]
 						</span>
 					</span>
 					{item.price && (

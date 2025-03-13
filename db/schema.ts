@@ -31,4 +31,5 @@ export const items = sqliteTable("items", {
 	personId: integer("person_id").references(() => people.id),
 	createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 	price: real("price"),
+	checkedAt: text("checked_at"),
 });
