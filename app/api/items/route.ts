@@ -17,12 +17,13 @@ export async function GET(request: Request) {
 		.map(Number)
 		.filter((id) => !Number.isNaN(id));
 
-	let query = db
+	const query = db
 		.select({
 			id: items.id,
 			name: items.name,
 			checked: items.checked,
 			createdAt: items.createdAt,
+			checkedAt: items.checkedAt,
 			tagId: items.tagId,
 			tag: {
 				id: tags.id,
@@ -111,10 +112,17 @@ export async function PUT(request: Request) {
 			checked,
 			...(personId && { personId: Number(personId) }),
 			...(price && { price: Number(price) }),
+			checkedAt: checked ? new Date().toISOString() : null,
 		};
 
 		if (personId === 0) {
 			updateData.personId = null;
+		}
+
+		if (!checked) {
+			updateData.price = null;
+			updateData.personId = null;
+			updateData.checkedAt = null;
 		}
 
 		const updatedItem = await db

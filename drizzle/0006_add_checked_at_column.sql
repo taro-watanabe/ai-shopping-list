@@ -1,0 +1,1 @@
+ALTER TABLE items ADD COLUMN checked_at TEXT DEFAULT NULL;
