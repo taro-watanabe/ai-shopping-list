@@ -1,0 +1,7 @@
+-- Migration number: 0007 	 2025-03-16T01:25:45.000Z
+CREATE TABLE receipts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    image_base64 TEXT NOT NULL,
+    person_id INTEGER REFERENCES people(id)
+);
