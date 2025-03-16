@@ -33,3 +33,12 @@ export const items = sqliteTable("items", {
 	price: real("price"),
 	checkedAt: text("checked_at"),
 });
+
+export const receipts = sqliteTable("receipts", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+	imageBase64: text("image_base64").notNull(),
+	personId: integer("person_id")
+		.references(() => people.id)
+		.notNull(),
+});
