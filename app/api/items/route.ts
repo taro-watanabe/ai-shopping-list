@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { items, tags, people } from "@/db/schema";
-import { eq, inArray, or, and, type SQL } from "drizzle-orm";
+import { items, tags, people, receipts } from "@/db/schema";
+import { eq, inArray, or, and, type SQL, exists, isNotNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -39,6 +39,9 @@ export async function GET(request: Request) {
 					}
 				: {},
 			price: items.price,
+			receiptId: items.receiptId,
+			// Check if receipt exists by checking if receiptId is not null
+			existsReceipt: isNotNull(items.receiptId),
 		})
 		.from(items)
 		.leftJoin(tags, eq(items.tagId, tags.id))
@@ -123,6 +126,7 @@ export async function PUT(request: Request) {
 			updateData.price = null;
 			updateData.personId = null;
 			updateData.checkedAt = null;
+			updateData.receiptId = null; // Clear receipt when unchecked
 		}
 
 		const updatedItem = await db
@@ -157,7 +161,22 @@ export async function DELETE(request: Request) {
 			);
 		}
 
+		// Get receipt ID first to delete it afterwards
+		const itemToDelete = await db
+			.select({ receiptId: items.receiptId })
+			.from(items)
+			.where(eq(items.id, parsedId))
+			.limit(1);
+
+		// Delete the item
 		await db.delete(items).where(eq(items.id, parsedId));
+
+		// If there was a receipt, delete it too
+		if (itemToDelete.length > 0 && itemToDelete[0].receiptId) {
+			await db
+				.delete(receipts)
+				.where(eq(receipts.id, itemToDelete[0].receiptId));
+		}
 
 		return NextResponse.json({ success: true });
 	} catch (error) {
