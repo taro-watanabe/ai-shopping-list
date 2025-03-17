@@ -187,11 +187,10 @@ export default function Home() {
 					<button
 						type="button"
 						key={tag.id}
-						className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${
-							selectedTagIds.includes(tag.id)
-								? "bg-gray-200 border-gray-300 border"
-								: "bg-white border"
-						}`}
+						className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${selectedTagIds.includes(tag.id)
+							? "bg-gray-200 border-gray-300 border"
+							: "bg-white border"
+							}`}
 						onClick={() => {
 							setSelectedTagIds((prev) =>
 								prev.includes(tag.id)
@@ -228,11 +227,10 @@ export default function Home() {
 					<button
 						type="button"
 						key={person.id}
-						className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${
-							selectedPersonIds.includes(person.id)
-								? "bg-gray-200 border-gray-300 border"
-								: "bg-white border"
-						}`}
+						className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${selectedPersonIds.includes(person.id)
+							? "bg-gray-200 border-gray-300 border"
+							: "bg-white border"
+							}`}
 						onClick={() => {
 							setSelectedPersonIds((prev) =>
 								prev.includes(person.id)
