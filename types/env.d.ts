@@ -7,4 +7,4 @@ declare global {
 }
 
 // Need to be exported to be a valid module
-export {};
+export type {};

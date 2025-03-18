@@ -5,7 +5,8 @@ import { useState, useEffect } from "react";
 interface ReceiptViewModalProps {
     open: boolean;
     onClose: () => void;
-    itemId: number | undefined | null;
+    itemId?: number | null;
+    receiptId?: number | null;
     personName?: string;
 }
 
@@ -13,6 +14,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
     open,
     onClose,
     itemId,
+    receiptId,
     personName,
 }) => {
     const [receipt, setReceipt] = useState<{
@@ -25,15 +27,20 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 
     useEffect(() => {
         async function fetchReceipt() {
-            if (!open || !itemId) return;
+            if (!open || (!itemId && !receiptId)) return;
 
             setLoading(true);
             try {
-                const response = await fetch(`/api/receipts?itemId=${itemId}`);
+                // Build URL based on which ID we have
+                const queryParam = itemId 
+                    ? `itemId=${itemId}` 
+                    : `receiptId=${receiptId}`;
+                
+                const response = await fetch(`/api/receipts?${queryParam}`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.length > 0) {
-                        setReceipt(data[0]); // We now expect at most one receipt
+                        setReceipt(data[0]);
                     } else {
                         setReceipt(null);
                     }
@@ -48,7 +55,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
         fetchReceipt();
         // Reset analysis when modal opens
         setAnalysis(null);
-    }, [open, itemId]);
+    }, [open, itemId, receiptId]);
 
     const handleAnalyze = async () => {
         if (!receipt) return;

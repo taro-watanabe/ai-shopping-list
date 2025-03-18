@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { PersonSelectModal } from "@/components/person-select-modal";
 import { ReceiptViewModal } from "@/components/receipt-view-modal";
+import { ReceiptUploadModal } from "@/components/receipt-upload-modal";
 
 async function fetchItems({
 	include = "person",
@@ -98,10 +99,12 @@ export default function Home() {
 	const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 	const [selectedPersonIds, setSelectedPersonIds] = useState<number[]>([]);
 	const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+	const [uploadModalOpen, setUploadModalOpen] = useState(false);
 	const [selectedPersonForReceipt, setSelectedPersonForReceipt] = useState<{
 		id: number;
 		name: string;
 	} | null>(null);
+	const [viewReceiptId, setViewReceiptId] = useState<number | null>(null);
 
 	// Update query to include filter parameters
 	const { data: items = [], isLoading: itemsLoading } = useQuery({
@@ -459,12 +462,21 @@ export default function Home() {
 						</option>
 					))}
 				</select>
-				<button
-					type="submit"
-					className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-				>
-					Add Item
-				</button>
+				<div className="flex gap-2">
+					<button
+						type="submit"
+						className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+					>
+						Add Item
+					</button>
+					<button
+						type="button"
+						onClick={() => setUploadModalOpen(true)}
+						className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600"
+					>
+						Upload Receipt
+					</button>
+				</div>
 			</form>
 
 			<div className="my-4 p-3 border rounded bg-gray-50">
@@ -512,9 +524,33 @@ export default function Home() {
 					setReceiptModalOpen(false);
 					setSelectedPersonForReceipt(null);
 					setItemToCheck(null);
+					setViewReceiptId(null); // Add this line
 				}}
 				itemId={itemToCheck}
+				receiptId={viewReceiptId} // Add this prop
 				personName={selectedPersonForReceipt?.name}
+			/>
+
+			<ReceiptUploadModal
+				open={uploadModalOpen}
+				onClose={() => setUploadModalOpen(false)}
+				onUpload={(imageData) => {
+					fetch("/api/receipts", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							imageBase64: imageData,
+							personId: null,
+							price: 0,
+						itemId: null
+						}),
+					}).then((response) => response.json()).then((receipt) => {
+						queryClient.invalidateQueries({ queryKey: ["items"] });
+						setItemToCheck(null); // Clear itemId
+						setViewReceiptId(receipt.id); // Set the receipt ID instead
+						setReceiptModalOpen(true);
+					});
+				}}
 			/>
 		</main>
 	);
