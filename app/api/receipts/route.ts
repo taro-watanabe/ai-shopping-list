@@ -82,14 +82,28 @@ export async function GET(request: Request) {
 		// If analysis requested, analyze the receipt image using AI
 		const { imageBase64 } = receiptData[0];
 
-		// Create multimodal message for analysis
+		// Create multimodal message for analysis with structured JSON prompt
 		const messages = [
 			{
 				role: "user" as const,
 				content: [
 					{
 						type: "text" as const,
-						text: "What's in this image?",
+						text: `Analyze this receipt image and return JSON with this structure: 
+							{
+							"date": "YYYY-MM-DD",
+							"place": "string",
+							"items": [
+								{"name": "string", "price": number},
+								...,
+							]
+							}
+							Important rules:
+							1. Ignore quantity rows like '3 x 2.40'
+							2. If data is incomplete or unclear, return "ERROR"
+							3. Only respond with valid JSON or "ERROR"
+
+							Receipt image:`,
 					},
 					{
 						type: "image_url" as const,
