@@ -1,76 +1,83 @@
 {
-	"version": "7",
-	"dialect": "sqlite",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "6",
-			"when": 1741544688173,
-			"tag": "0000_lame_wendigo",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "6",
-			"when": 1741556867466,
-			"tag": "0001_dazzling_nomad",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "6",
-			"when": 1742084998484,
-			"tag": "0002_add_people",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "6",
-			"when": 1742084998485,
-			"tag": "0003_fake_delete_tags_people",
-			"breakpoints": true
-		},
-		{
-			"idx": 4,
-			"version": "6",
-			"when": 1742084998486,
-			"tag": "0004_add_price_to_items",
-			"breakpoints": true
-		},
-		{
-			"idx": 5,
-			"version": "6",
-			"when": 1742084998487,
-			"tag": "0005_change_timestamp_format",
-			"breakpoints": true
-		},
-		{
-			"idx": 6,
-			"version": "6",
-			"when": 1742084998488,
-			"tag": "0006_add_checked_at_column",
-			"breakpoints": true
-		},
-		{
-			"idx": 7,
-			"version": "6",
-			"when": 1742084998489,
-			"tag": "0007_stunning_receipt",
-			"breakpoints": true
-		},
-		{
-			"idx": 8,
-			"version": "6",
-			"when": 1742122928424,
-			"tag": "0008_dazzling_speedball",
-			"breakpoints": true
-		},
-		{
-			"idx": 9,
-			"version": "6",
-			"when": 1742138378165,
-			"tag": "0009_vengeful_thaddeus_ross",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1741544688173,
+      "tag": "0000_lame_wendigo",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1741556867466,
+      "tag": "0001_dazzling_nomad",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1742084998484,
+      "tag": "0002_add_people",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1742084998485,
+      "tag": "0003_fake_delete_tags_people",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1742084998486,
+      "tag": "0004_add_price_to_items",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1742084998487,
+      "tag": "0005_change_timestamp_format",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1742084998488,
+      "tag": "0006_add_checked_at_column",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1742084998489,
+      "tag": "0007_stunning_receipt",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1742122928424,
+      "tag": "0008_dazzling_speedball",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1742138378165,
+      "tag": "0009_vengeful_thaddeus_ross",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1742601042322,
+      "tag": "0010_nostalgic_patriot",
+      "breakpoints": true
+    }
+  ]
 }
