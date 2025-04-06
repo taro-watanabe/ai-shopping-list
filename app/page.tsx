@@ -3,6 +3,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { PersonSelectModal } from "@/components/person-select-modal";
+import { ReceiptViewModal } from "@/components/receipt-view-modal";
+import { ReceiptUploadModal } from "@/components/receipt-upload-modal";
+import { ReceiptViewOnlyModal } from "@/components/receipt-viewonly-modal";
+import { view } from "drizzle-orm/sqlite-core";
 
 async function fetchItems({
 	include = "person",
@@ -55,11 +59,26 @@ async function toggleItem({
 	checked,
 	personId,
 	price,
-}: { id: number; checked: boolean; personId?: number; price?: number }) {
+}: {
+	id: number;
+	checked: boolean;
+	personId?: number;
+	price?: number;
+}) {
 	const response = await fetch("/api/items", {
 		method: "PUT",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ id, checked, personId, price }),
+	});
+	return response.json();
+}
+
+// New function to create a receipt
+async function createReceipt(itemId: number, imageBase64: string) {
+	const response = await fetch("/api/receipts", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ itemId, imageBase64 }),
 	});
 	return response.json();
 }
@@ -81,6 +100,14 @@ export default function Home() {
 	const [itemToCheck, setItemToCheck] = useState<number | null>(null);
 	const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 	const [selectedPersonIds, setSelectedPersonIds] = useState<number[]>([]);
+	const [receiptModalOpen, setReceiptModalOpen] = useState(false); // For ReceiptViewOnlyModal
+	const [receiptViewModalOpen, setReceiptViewModalOpen] = useState(false); // For ReceiptViewModal
+	const [uploadModalOpen, setUploadModalOpen] = useState(false);
+	const [selectedPersonForReceipt, setSelectedPersonForReceipt] = useState<{
+		id: number;
+		name: string;
+	} | null>(null);
+	const [viewReceiptId, setViewReceiptId] = useState<number | null>(null);
 
 	// Update query to include filter parameters
 	const { data: items = [], isLoading: itemsLoading } = useQuery({
@@ -131,17 +158,30 @@ export default function Home() {
 		setModalOpen(true);
 	};
 
-	const handlePersonSelect = (
+	const handlePersonSelect = async (
 		personId: number | null,
 		price: number | null,
+		receiptBase64: string | null,
 	) => {
 		if (itemToCheck) {
-			toggleMutation.mutate({
+			// First update the item
+			const updatedItem = await toggleMutation.mutateAsync({
 				id: itemToCheck,
 				checked: true,
 				personId: personId ?? undefined,
 				price: price ?? undefined,
 			});
+
+			// Then create a receipt if we have an image
+			if (receiptBase64 && updatedItem.id) {
+				try {
+					await createReceipt(updatedItem.id, receiptBase64);
+					// Explicitly invalidate the items query after creating a receipt
+					queryClient.invalidateQueries({ queryKey: ["items"] });
+				} catch (error) {
+					console.error("Failed to upload receipt:", error);
+				}
+			}
 		}
 	};
 
@@ -238,87 +278,139 @@ export default function Home() {
 		personId?: number;
 		person?: { id: number; name: string; color: string };
 		price?: number;
-	}) => (
-		<li key={item.id} className="flex items-center justify-between">
-			<div className="flex items-center">
-				<input
-					type="checkbox"
-					checked={item.checked}
-					onChange={() => {
-						if (!item.checked) {
-							handleCheckItem(item.id);
-						} else {
-							toggleMutation.mutate({
-								id: item.id,
-								checked: false,
-								personId: 0,
-								price: undefined,
-							});
-						}
-					}}
-					className="mr-2"
-				/>
-				<div className="flex flex-col">
-					<span className={item.checked ? "line-through" : ""}>
-						{item.name}{" "}
-						<span className="text-xs text-gray-500 ml-2">
-							[
-							{
-								new Date(item.checkedAt || item.createdAt)
-									.toISOString()
-									.split("T")[0]
+		existsReceipt?: number;
+	}) => {
+		// Add debugging to see the actual values
+		console.log(
+			`Item ${item.id} - existsReceipt:`,
+			item.existsReceipt,
+			typeof item.existsReceipt,
+		);
+
+		return (
+			<li key={item.id} className="flex items-center justify-between">
+				<div className="flex items-center">
+					<input
+						type="checkbox"
+						checked={item.checked}
+						onChange={() => {
+							if (!item.checked) {
+								handleCheckItem(item.id);
+							} else {
+								toggleMutation.mutate({
+									id: item.id,
+									checked: false,
+									personId: 0,
+									price: undefined,
+								});
 							}
-							]
+						}}
+						className="mr-2"
+					/>
+					<div className="flex flex-col">
+						<span className={item.checked ? "line-through" : ""}>
+							{item.name}{" "}
+							<span className="text-xs text-gray-500 ml-2">
+								[
+								{
+									new Date(item.checkedAt || item.createdAt)
+										.toISOString()
+										.split("T")[0]
+								}
+								]
+							</span>
 						</span>
-					</span>
-					{item.price && (
-						<span className="text-sm text-gray-600">
-							€{item.price.toFixed(2)}
-						</span>
-					)}
+						{item.price && (
+							<span className="text-sm text-gray-600">
+								€{item.price.toFixed(2)}
+							</span>
+						)}
+					</div>
 				</div>
-			</div>
-			<div className="flex items-center gap-2">
-				{item.tag && (
+				<div className="flex items-center gap-2">
+					{item.tag && (
+						<div className="flex items-center gap-2">
+							<span className="text-sm text-gray-600">{item.tag.name}</span>
+							<span
+								className="w-4 h-4 rounded-full"
+								style={{ backgroundColor: `#${item.tag.color}` }}
+							/>
+						</div>
+					)}
+					{/* Begin person and receipt section */}
 					<div className="flex items-center gap-2">
-						<span className="text-sm text-gray-600">{item.tag.name}</span>
-						<span
-							className="w-4 h-4 rounded-full"
-							style={{ backgroundColor: `#${item.tag.color}` }}
-						/>
+						{item.person && (
+							<>
+								<span className="text-sm text-gray-600">
+									{item.person.name}
+								</span>
+								<span
+									className="w-4 h-4 rounded-full"
+									style={{ backgroundColor: `#${item.person.color}` }}
+								/>
+							</>
+						)}
+						{/* Move receipt icon outside person condition - only check if existsReceipt is true */}
+						{item.existsReceipt === 1 && (
+							<button
+								onClick={() => {
+									setItemToCheck(item.id);
+									if (item.person) {
+										setSelectedPersonForReceipt({
+											id: item.person.id,
+											name: item.person.name,
+										});
+									}
+									setReceiptModalOpen(true);
+								}}
+								className="ml-1 text-blue-500 hover:text-blue-700"
+								title="View receipts"
+								type="button"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									className="h-5 w-5"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									aria-labelledby="receiptIconTitle"
+								>
+									<title id="receiptIconTitle">Receipt</title>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+									/>
+								</svg>
+							</button>
+						)}
 					</div>
-				)}
-				{item.person && (
-					<div className="flex items-center gap-2">
-						<span className="text-sm text-gray-600">{item.person.name}</span>
-						<span
-							className="w-4 h-4 rounded-full"
-							style={{ backgroundColor: `#${item.person.color}` }}
-						/>
-					</div>
-				)}
-				<button
-					type="button"
-					onClick={() => deleteMutation.mutate(item.id)}
-					className="text-red-500 hover:text-red-700"
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						className="h-5 w-5"
-						viewBox="0 0 20 20"
-						fill="currentColor"
+					{/* End person and receipt section */}
+					<button
+						type="button"
+						onClick={() => deleteMutation.mutate(item.id)}
+						className="text-red-500 hover:text-red-700"
 					>
-						<title>Delete item</title>
-						<path
-							fillRule="evenodd"
-							d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-							clipRule="evenodd"
-						/>
-					</svg>
-				</button>
-			</div>
-		</li>
-	);
+						{/* Delete icon SVG */}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							className="h-5 w-5"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+						>
+							<title>Delete item</title>
+							<path
+								fillRule="evenodd"
+								d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+								clipRule="evenodd"
+							/>
+						</svg>
+					</button>
+				</div>
+			</li>
+		);
+	};
 
 	// Calculate totals for both checked and unchecked items
 	const calculateTotal = (
@@ -339,6 +431,8 @@ export default function Home() {
 	const uncheckedTotal = calculateTotal(filteredUncheckedItems);
 	const checkedTotal = calculateTotal(filteredCheckedItems);
 	const grandTotal = uncheckedTotal + checkedTotal;
+
+	console.log(viewReceiptId);
 
 	return (
 		<main className="p-4 max-w-md mx-auto">
@@ -375,12 +469,21 @@ export default function Home() {
 						</option>
 					))}
 				</select>
-				<button
-					type="submit"
-					className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-				>
-					Add Item
-				</button>
+				<div className="flex gap-2">
+					<button
+						type="submit"
+						className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+					>
+						Add Item
+					</button>
+					<button
+						type="button"
+						onClick={() => setUploadModalOpen(true)}
+						className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600"
+					>
+						Upload Receipt
+					</button>
+				</div>
 			</form>
 
 			<div className="my-4 p-3 border rounded bg-gray-50">
@@ -420,6 +523,55 @@ export default function Home() {
 				onClose={() => setModalOpen(false)}
 				onSelect={handlePersonSelect}
 				people={people}
+			/>
+
+			{/* Modal for viewing existing receipts (from receipt icon) */}
+			<ReceiptViewOnlyModal
+				open={receiptModalOpen}
+				onClose={() => {
+					setReceiptModalOpen(false);
+					setSelectedPersonForReceipt(null);
+					setItemToCheck(null);
+					setViewReceiptId(null);
+				}}
+				itemId={itemToCheck}
+				receiptId={viewReceiptId}
+			/>
+
+			{/* Modal for viewing uploaded receipts */}
+			<ReceiptViewModal
+				open={receiptViewModalOpen}
+				onClose={() => {
+					setReceiptViewModalOpen(false);
+					setViewReceiptId(null);
+				}}
+				itemId={null}
+				receiptId={viewReceiptId}
+				personName={selectedPersonForReceipt?.name}
+			/>
+
+			<ReceiptUploadModal
+				open={uploadModalOpen}
+				onClose={() => setUploadModalOpen(false)}
+				onUpload={(imageData) => {
+					fetch("/api/receipts", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							imageBase64: imageData,
+							personId: null,
+							price: 0,
+							itemId: null,
+						}),
+					})
+						.then((response) => response.json())
+						.then((receipt) => {
+							queryClient.invalidateQueries({ queryKey: ["items"] });
+							setItemToCheck(null); // Clear itemId
+							setViewReceiptId(receipt.id); // Set the receipt ID
+							setReceiptViewModalOpen(true); // Open ReceiptViewModal instead of ReceiptViewOnlyModal
+						});
+				}}
 			/>
 		</main>
 	);

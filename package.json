@@ -19,8 +19,10 @@
     "drizzle-kit": "^0.30.5",
     "drizzle-orm": "^0.40.0",
     "next": "15.2.1",
+    "openai": "^4.87.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "sqlite-vec": "^0.1.7-alpha.2",
     "tailwind-merge": "^3.0.2"
   },
   "devDependencies": {

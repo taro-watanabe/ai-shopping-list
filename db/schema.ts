@@ -23,22 +23,21 @@ export const people = sqliteTable("people", {
 	deleted: integer("deleted", { mode: "boolean" }).notNull().default(false),
 });
 
+export const receipts = sqliteTable("receipts", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+	imageBase64: text("image_base64").notNull(),
+});
+
 export const items = sqliteTable("items", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
 	name: text("name").notNull(),
+	vector: text("vector"), // Will store JSON array of embeddings
 	checked: integer("checked", { mode: "boolean" }).notNull().default(false),
 	tagId: integer("tag_id").references(() => tags.id),
 	personId: integer("person_id").references(() => people.id),
 	createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 	price: real("price"),
 	checkedAt: text("checked_at"),
-});
-
-export const receipts = sqliteTable("receipts", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-	imageBase64: text("image_base64").notNull(),
-	personId: integer("person_id")
-		.references(() => people.id)
-		.notNull(),
+	receiptId: integer("receipt_id").references(() => receipts.id), // Add this new field
 });
