@@ -2,17 +2,17 @@ import fs from "node:fs";
 import path from "node:path";
 import OpenAI from "openai";
 
-function loadOpenRouterApiKeyCoalescing(): string {
-	const directApiKey = process.env.OPENROUTER_API_KEY?.trim();
+function loadOpenAIApiKeyCoalescing(): string {
+	const directApiKey = process.env.OPENAI_API_KEY?.trim();
 	if (directApiKey) {
 		console.info("Using OpenRouter API key from direct environment variable.");
 		return directApiKey;
 	}
 
-	const apiKeyPath = process.env.OPENROUTER_API_KEY_PATH?.trim();
+	const apiKeyPath = process.env.OPENAI_API_KEY_PATH?.trim();
 	if (!apiKeyPath) {
 		throw new Error(
-			"FATAL: Could not load OpenRouter API key. Set either OPENROUTER_API_KEY (direct value) or OPENROUTER_API_KEY_PATH (path to key file) environment variable."
+			"FATAL: Could not load OpenRouter API key. Set either OPENAI_API_KEY (direct value) or OPENAI_API_KEY_PATH (path to key file) environment variable."
 		);
 	}
 
@@ -31,12 +31,11 @@ function loadOpenRouterApiKeyCoalescing(): string {
 		}
 
 		console.info("Successfully loaded OpenRouter API key from file.");
-		console.log(keyContent);
 		return keyContent;
 	} catch (error: unknown) {
 		if (error instanceof Error) {
 			console.error(
-				`FATAL: Failed to read OpenRouter API key from file specified by OPENROUTER_API_KEY_PATH (${apiKeyPath}): ${error.message}`
+				`FATAL: Failed to read OpenRouter API key from file specified by OPENAI_API_KEY_PATH (${apiKeyPath}): ${error.message}`
 			);
 			throw new Error(
 				`Could not load OpenRouter API key from file: ${error.message}`
@@ -50,14 +49,9 @@ function loadOpenRouterApiKeyCoalescing(): string {
 }
 
 
-const effectiveOpenRouterApiKey = loadOpenRouterApiKeyCoalescing();
+const effectiveOpenAIApiKey = loadOpenAIApiKeyCoalescing();
 
-
-export const openrouter = new OpenAI({
-	apiKey: effectiveOpenRouterApiKey,
-	baseURL: "https://openrouter.ai/api/v1",
-	defaultHeaders: {
-		"HTTP-Referer": process.env.NEXT_PUBLIC_HOST || "http://localhost:3000",
-		"X-Title": "Oh-Todo Receipt Analysis",
-	},
-});
+export const openai = new OpenAI({
+	apiKey: effectiveOpenAIApiKey,
+	dangerouslyAllowBrowser: true,
+});      

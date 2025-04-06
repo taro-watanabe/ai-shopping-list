@@ -32,6 +32,7 @@ export const receipts = sqliteTable("receipts", {
 export const items = sqliteTable("items", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
 	name: text("name").notNull(),
+	vector: text("vector"), // Will store JSON array of embeddings
 	checked: integer("checked", { mode: "boolean" }).notNull().default(false),
 	tagId: integer("tag_id").references(() => tags.id),
 	personId: integer("person_id").references(() => people.id),

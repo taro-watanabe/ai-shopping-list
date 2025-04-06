@@ -5,6 +5,8 @@ import { useState } from "react";
 import { PersonSelectModal } from "@/components/person-select-modal";
 import { ReceiptViewModal } from "@/components/receipt-view-modal";
 import { ReceiptUploadModal } from "@/components/receipt-upload-modal";
+import { ReceiptViewOnlyModal } from "@/components/receipt-viewonly-modal";
+import { view } from "drizzle-orm/sqlite-core";
 
 async function fetchItems({
 	include = "person",
@@ -98,7 +100,8 @@ export default function Home() {
 	const [itemToCheck, setItemToCheck] = useState<number | null>(null);
 	const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 	const [selectedPersonIds, setSelectedPersonIds] = useState<number[]>([]);
-	const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+	const [receiptModalOpen, setReceiptModalOpen] = useState(false); // For ReceiptViewOnlyModal
+	const [receiptViewModalOpen, setReceiptViewModalOpen] = useState(false); // For ReceiptViewModal
 	const [uploadModalOpen, setUploadModalOpen] = useState(false);
 	const [selectedPersonForReceipt, setSelectedPersonForReceipt] = useState<{
 		id: number;
@@ -190,10 +193,11 @@ export default function Home() {
 					<button
 						type="button"
 						key={tag.id}
-						className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${selectedTagIds.includes(tag.id)
-							? "bg-gray-200 border-gray-300 border"
-							: "bg-white border"
-							}`}
+						className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${
+							selectedTagIds.includes(tag.id)
+								? "bg-gray-200 border-gray-300 border"
+								: "bg-white border"
+						}`}
 						onClick={() => {
 							setSelectedTagIds((prev) =>
 								prev.includes(tag.id)
@@ -230,10 +234,11 @@ export default function Home() {
 					<button
 						type="button"
 						key={person.id}
-						className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${selectedPersonIds.includes(person.id)
-							? "bg-gray-200 border-gray-300 border"
-							: "bg-white border"
-							}`}
+						className={`px-2 py-1 rounded text-sm flex items-center gap-1 ${
+							selectedPersonIds.includes(person.id)
+								? "bg-gray-200 border-gray-300 border"
+								: "bg-white border"
+						}`}
 						onClick={() => {
 							setSelectedPersonIds((prev) =>
 								prev.includes(person.id)
@@ -427,6 +432,8 @@ export default function Home() {
 	const checkedTotal = calculateTotal(filteredCheckedItems);
 	const grandTotal = uncheckedTotal + checkedTotal;
 
+	console.log(viewReceiptId);
+
 	return (
 		<main className="p-4 max-w-md mx-auto">
 			<h1 className="text-2xl font-bold mb-4">Shopping List</h1>
@@ -518,16 +525,28 @@ export default function Home() {
 				people={people}
 			/>
 
-			<ReceiptViewModal
+			{/* Modal for viewing existing receipts (from receipt icon) */}
+			<ReceiptViewOnlyModal
 				open={receiptModalOpen}
 				onClose={() => {
 					setReceiptModalOpen(false);
 					setSelectedPersonForReceipt(null);
 					setItemToCheck(null);
-					setViewReceiptId(null); // Add this line
+					setViewReceiptId(null);
 				}}
 				itemId={itemToCheck}
-				receiptId={viewReceiptId} // Add this prop
+				receiptId={viewReceiptId}
+			/>
+
+			{/* Modal for viewing uploaded receipts */}
+			<ReceiptViewModal
+				open={receiptViewModalOpen}
+				onClose={() => {
+					setReceiptViewModalOpen(false);
+					setViewReceiptId(null);
+				}}
+				itemId={null}
+				receiptId={viewReceiptId}
 				personName={selectedPersonForReceipt?.name}
 			/>
 
@@ -542,14 +561,16 @@ export default function Home() {
 							imageBase64: imageData,
 							personId: null,
 							price: 0,
-						itemId: null
+							itemId: null,
 						}),
-					}).then((response) => response.json()).then((receipt) => {
-						queryClient.invalidateQueries({ queryKey: ["items"] });
-						setItemToCheck(null); // Clear itemId
-						setViewReceiptId(receipt.id); // Set the receipt ID instead
-						setReceiptModalOpen(true);
-					});
+					})
+						.then((response) => response.json())
+						.then((receipt) => {
+							queryClient.invalidateQueries({ queryKey: ["items"] });
+							setItemToCheck(null); // Clear itemId
+							setViewReceiptId(receipt.id); // Set the receipt ID
+							setReceiptViewModalOpen(true); // Open ReceiptViewModal instead of ReceiptViewOnlyModal
+						});
 				}}
 			/>
 		</main>

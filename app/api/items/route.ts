@@ -24,6 +24,7 @@ export async function GET(request: Request) {
 			checked: items.checked,
 			createdAt: items.createdAt,
 			checkedAt: items.checkedAt,
+			vector: items.vector,
 			tagId: items.tagId,
 			tag: {
 				id: tags.id,
@@ -33,10 +34,10 @@ export async function GET(request: Request) {
 			personId: items.personId,
 			person: include?.includes("person")
 				? {
-						id: people.id,
-						name: people.name,
-						color: people.color,
-					}
+					id: people.id,
+					name: people.name,
+					color: people.color,
+				}
 				: {},
 			price: items.price,
 			receiptId: items.receiptId,
@@ -60,6 +61,12 @@ export async function GET(request: Request) {
 		conditions.push(inArray(items.personId, personIds));
 	}
 
+	// if checked boolean is provided, filter by it
+	const checked = searchParams.get("checked");
+	if (checked !== null) {
+		conditions.push(eq(items.checked, checked === "true"));
+	}
+
 	// Build final condition before applying where clause
 	let finalCondition: SQL | undefined;
 	if (conditions.length === 2) {
@@ -79,29 +86,81 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
 	const { name, tagId, personId } = await request.json();
 
-	const newItem = await db
-		.insert(items)
-		.values({
-			name,
-			tagId: tagId ? Number(tagId) : null,
-			personId: personId ? Number(personId) : null,
-		})
-		.returning({
-			id: items.id,
-			name: items.name,
-			checked: items.checked,
-			createdAt: items.createdAt,
-			tagId: items.tagId,
-			personId: items.personId,
+	try {
+		// Generate embedding for the item name
+		const response = await fetch("/api/openai", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ text: name }),
 		});
 
-	return NextResponse.json(newItem[0]);
+		if (!response.ok) {
+			throw new Error("Failed to generate embedding");
+		}
+		const embeddingData = await response.json();
+		const embedding = embeddingData.embedding;
+		if (!Array.isArray(embedding)) {
+			throw new Error("Invalid embedding format");
+		}
+		if (embedding.length === 0) {
+			throw new Error("Empty embedding");
+		}
+		// Ensure embedding is a number array
+		if (!embedding.every((val) => typeof val === "number")) {
+			throw new Error("Embedding contains non-numeric values");
+		}
+		// Ensure embedding length is consistent
+		if (embedding.length !== 1536) {
+			throw new Error(
+				`Embedding length is ${embedding.length}, expected 1536`,
+			);
+		}
+
+		console.log("Embeddino:", embedding.length);
+
+		// Store as JSON string in text column
+		const newItem = await db
+			.insert(items)
+			.values({
+				name,
+				tagId: tagId ? Number(tagId) : null,
+				personId: personId ? Number(personId) : null,
+				vector: JSON.stringify(embedding),
+			})
+			.returning({
+				id: items.id,
+				name: items.name,
+				checked: items.checked,
+				createdAt: items.createdAt,
+				tagId: items.tagId,
+				personId: items.personId,
+				vector: items.vector
+			});
+
+		return NextResponse.json(newItem[0]);
+	} catch (error) {
+		console.error("Failed to generate embedding:", error);
+		return NextResponse.json(
+			{ error: "Failed to create item with embedding" },
+			{ status: 500 }
+		);
+	}
 }
 
 export async function PUT(request: Request) {
 	try {
 		const body = await request.json();
-		const { id, checked, personId, price } = body;
+		const { id, checked, personId, price, receiptId } = body;
+
+		// Validate price is a number if provided
+		if (price !== undefined && Number.isNaN(Number(price))) {
+			return NextResponse.json(
+				{ error: "Invalid price format" },
+				{ status: 400 }
+			);
+		}
 
 		const parsedId = Number(id);
 		if (Number.isNaN(parsedId) || typeof checked !== "boolean") {
@@ -114,14 +173,17 @@ export async function PUT(request: Request) {
 		const updateData = {
 			checked,
 			...(personId && { personId: Number(personId) }),
-			...(price && { price: Number(price) }),
+			...(price !== undefined && { price: Number(price) }),
+			...(receiptId && { receiptId: Number(receiptId) }),
 			checkedAt: checked ? new Date().toISOString() : null,
+
 		};
 
 		if (personId === 0) {
 			updateData.personId = null;
 		}
 
+		// If checkbox is not checked, do nothing
 		if (!checked) {
 			updateData.price = null;
 			updateData.personId = null;
@@ -139,7 +201,10 @@ export async function PUT(request: Request) {
 			return NextResponse.json({ error: "Item not found" }, { status: 404 });
 		}
 
-		return NextResponse.json(updatedItem[0]);
+		return NextResponse.json({
+			...updatedItem[0],
+			vector: updatedItem[0].vector
+		});
 	} catch (error) {
 		console.error("Error updating item:", error);
 		return NextResponse.json(

@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "6e33d4d3-e3ae-4ad9-ad56-a4c78df3401a",
-  "prevId": "c003e2a7-4b69-4b78-b961-95b0f49d087a",
+  "id": "88396cac-49c5-4c76-aa77-a1c0eec1d09a",
+  "prevId": "6e33d4d3-e3ae-4ad9-ad56-a4c78df3401a",
   "tables": {
     "items": {
       "name": "items",
@@ -64,6 +64,13 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "receipt_id": {
+          "name": "receipt_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {},
@@ -87,6 +94,19 @@
           "tableTo": "people",
           "columnsFrom": [
             "person_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "items_receipt_id_receipts_id_fk": {
+          "name": "items_receipt_id_receipts_id_fk",
+          "tableFrom": "items",
+          "tableTo": "receipts",
+          "columnsFrom": [
+            "receipt_id"
           ],
           "columnsTo": [
             "id"
@@ -178,31 +198,10 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "item_id": {
-          "name": "item_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "receipts_item_id_items_id_fk": {
-          "name": "receipts_item_id_items_id_fk",
-          "tableFrom": "receipts",
-          "tableTo": "items",
-          "columnsFrom": [
-            "item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}

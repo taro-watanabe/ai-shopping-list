@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { receipts, items } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { getMultimodalCompletion } from "@/lib/openrouter";
+// import { getMultimodalCompletion } from "@/lib/openrouter";
 
 export async function GET(request: Request) {
 	try {
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 		let receiptData: Array<{
 			id: number;
 			imageBase64: string;
-			createdAt: Date;
+			createdAt: string;
 		}> = [];
 
 		// Handle receiptId first for direct access
@@ -80,49 +80,6 @@ export async function GET(request: Request) {
 		}
 
 		// If analysis requested, analyze the receipt image using AI
-		const { imageBase64 } = receiptData[0];
-
-		// Create multimodal message for analysis with structured JSON prompt
-		const messages = [
-			{
-				role: "user" as const,
-				content: [
-					{
-						type: "text" as const,
-						text: `Analyze this receipt image and return JSON with this structure: 
-							{
-							"date": "YYYY-MM-DD",
-							"place": "string",
-							"items": [
-								{"name": "string", "price": number},
-								...,
-							]
-							}
-							Important rules:
-							1. Ignore quantity rows like '3 x 2.40'
-							2. If data is incomplete or unclear, return "ERROR"
-							3. Only respond with valid JSON or "ERROR"
-
-							Receipt image:`,
-					},
-					{
-						type: "image_url" as const,
-						image_url: {
-							url: `data:image/jpeg;base64,${imageBase64}`,
-						},
-					},
-				],
-			},
-		];
-
-		// Get AI analysis
-		const analysis = await getMultimodalCompletion(messages);
-
-		// Return receipt data with analysis
-		return NextResponse.json({
-			receipt: receiptData[0],
-			analysis,
-		});
 	} catch (error) {
 		console.error("Error getting receipt:", error);
 		return new NextResponse("Internal server error", { status: 500 });
@@ -153,7 +110,10 @@ export async function POST(request: Request) {
 				.where(eq(items.id, itemId));
 		}
 
-		return NextResponse.json(newReceipt);
+		return NextResponse.json({
+			...newReceipt,
+			imageBase64 // Explicitly include in response
+		});
 	} catch (error) {
 		console.error("Error saving receipt:", error);
 		return new NextResponse("Internal server error", { status: 500 });

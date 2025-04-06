@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface ReceiptUploadModalProps {
   open: boolean;
@@ -11,6 +11,18 @@ interface ReceiptUploadModalProps {
 export function ReceiptUploadModal({ open, onClose, onUpload }: ReceiptUploadModalProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!open) {
+      setPreview(null);
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [open]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,8 +57,9 @@ export function ReceiptUploadModal({ open, onClose, onUpload }: ReceiptUploadMod
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
         <h2 className="text-xl font-bold mb-4">Upload Receipt</h2>
-        
+
         <input
+          ref={fileInputRef}
           type="file"
           accept="image/*"
           onChange={handleFileChange}
@@ -56,9 +69,9 @@ export function ReceiptUploadModal({ open, onClose, onUpload }: ReceiptUploadMod
 
         {preview && (
           <div className="mb-4">
-            <img 
-              src={preview} 
-              alt="Receipt preview" 
+            <img
+              src={preview}
+              alt="Receipt preview"
               className="max-h-64 object-contain mx-auto"
             />
           </div>
