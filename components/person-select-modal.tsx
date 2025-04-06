@@ -25,7 +25,11 @@ interface Person {
 interface PersonSelectModalProps {
 	open: boolean;
 	onClose: () => void;
-	onSelect: (personId: number | null, price: number | null) => void;
+	onSelect: (
+		personId: number | null,
+		price: number | null,
+		receiptBase64: string | null,
+	) => void;
 	people: Person[];
 }
 
@@ -37,16 +41,29 @@ export const PersonSelectModal: React.FC<PersonSelectModalProps> = ({
 }) => {
 	const [selectedPerson, setSelectedPerson] = useState<number | null>(null);
 	const [price, setPrice] = useState<string>("");
+	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
 	if (!open) return null;
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		const priceValue = price ? Number.parseFloat(price) : null;
-		onSelect(selectedPerson, priceValue);
+
+		if (selectedFile) {
+			const reader = new FileReader();
+			reader.onloadend = async () => {
+				const base64 = reader.result?.toString().split(",")[1] || "";
+				onSelect(selectedPerson, priceValue, base64);
+			};
+			reader.readAsDataURL(selectedFile);
+		} else {
+			onSelect(selectedPerson, priceValue, null);
+		}
+
 		onClose();
 		setSelectedPerson(null);
 		setPrice("");
+		setSelectedFile(null);
 	};
 
 	const handlePersonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -85,6 +102,18 @@ export const PersonSelectModal: React.FC<PersonSelectModalProps> = ({
 							onChange={(e) => setPrice(e.target.value)}
 							placeholder="Enter price in EUR (Optional)"
 							step="0.01"
+							className="w-full p-2 border rounded mb-4"
+						/>
+					</div>
+
+					<div>
+						<label className="block text-sm font-medium mb-2">
+							Upload Receipt (Optional)
+						</label>
+						<input
+							type="file"
+							accept="image/*"
+							onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
 							className="w-full p-2 border rounded"
 						/>
 					</div>
