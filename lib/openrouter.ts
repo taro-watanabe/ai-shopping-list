@@ -31,7 +31,6 @@ function loadOpenRouterApiKeyCoalescing(): string {
 		}
 
 		console.info("Successfully loaded OpenRouter API key from file.");
-		console.log(keyContent);
 		return keyContent;
 	} catch (error: unknown) {
 		if (error instanceof Error) {

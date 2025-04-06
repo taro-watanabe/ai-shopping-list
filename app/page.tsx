@@ -280,13 +280,6 @@ export default function Home() {
 		price?: number;
 		existsReceipt?: number;
 	}) => {
-		// Add debugging to see the actual values
-		console.log(
-			`Item ${item.id} - existsReceipt:`,
-			item.existsReceipt,
-			typeof item.existsReceipt,
-		);
-
 		return (
 			<li key={item.id} className="flex items-center justify-between">
 				<div className="flex items-center">
@@ -431,9 +424,6 @@ export default function Home() {
 	const uncheckedTotal = calculateTotal(filteredUncheckedItems);
 	const checkedTotal = calculateTotal(filteredCheckedItems);
 	const grandTotal = uncheckedTotal + checkedTotal;
-
-	console.log(viewReceiptId);
-
 	return (
 		<main className="p-4 max-w-md mx-auto">
 			<h1 className="text-2xl font-bold mb-4">Shopping List</h1>
