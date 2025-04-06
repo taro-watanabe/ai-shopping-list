@@ -12,22 +12,20 @@ function loadOpenAIApiKeyCoalescing(): string {
 	const apiKeyPath = process.env.OPENAI_API_KEY_PATH?.trim();
 	if (!apiKeyPath) {
 		throw new Error(
-			"FATAL: Could not load OpenRouter API key. Set either OPENAI_API_KEY (direct value) or OPENAI_API_KEY_PATH (path to key file) environment variable."
+			"FATAL: Could not load OpenRouter API key. Set either OPENAI_API_KEY (direct value) or OPENAI_API_KEY_PATH (path to key file) environment variable.",
 		);
 	}
 
 	try {
 		const absolutePath = path.resolve(apiKeyPath); // Ensure absolute path
 		console.info(
-			`Attempting to load OpenRouter API key from file: ${absolutePath}`
+			`Attempting to load OpenRouter API key from file: ${absolutePath}`,
 		);
 
 		const keyContent = fs.readFileSync(absolutePath, "utf8").trim();
 
 		if (!keyContent) {
-			throw new Error(
-				`API key file found at ${absolutePath} but it is empty.`
-			);
+			throw new Error(`API key file found at ${absolutePath} but it is empty.`);
 		}
 
 		console.info("Successfully loaded OpenRouter API key from file.");
@@ -35,23 +33,31 @@ function loadOpenAIApiKeyCoalescing(): string {
 	} catch (error: unknown) {
 		if (error instanceof Error) {
 			console.error(
-				`FATAL: Failed to read OpenRouter API key from file specified by OPENAI_API_KEY_PATH (${apiKeyPath}): ${error.message}`
+				`FATAL: Failed to read OpenRouter API key from file specified by OPENAI_API_KEY_PATH (${apiKeyPath}): ${error.message}`,
 			);
 			throw new Error(
-				`Could not load OpenRouter API key from file: ${error.message}`
+				`Could not load OpenRouter API key from file: ${error.message}`,
 			);
 		}
 		console.error(
-			"FATAL: An unknown error occurred while reading the OpenRouter API key file."
+			"FATAL: An unknown error occurred while reading the OpenRouter API key file.",
 		);
 		throw new Error("Could not load OpenRouter API key from file.");
 	}
 }
-
 
 const effectiveOpenAIApiKey = loadOpenAIApiKeyCoalescing();
 
 export const openai = new OpenAI({
 	apiKey: effectiveOpenAIApiKey,
 	dangerouslyAllowBrowser: true,
-});      
+});
+
+export async function generateEmbedding(text: string) {
+	const response = await openai.embeddings.create({
+		model: "text-embedding-3-small",
+		input: text,
+	});
+
+	return response.data[0].embedding;
+}

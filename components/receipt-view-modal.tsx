@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 interface AnalysisItem {
 	name: string;
 	price: number;
+	description: string;
 	embedding: number[];
 }
 
@@ -82,7 +83,10 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 	useEffect(() => {
 		async function fetchReceipt() {
 			if (!open || (!itemId && !receiptId)) return;
-
+			setAnalysis(null);
+			setParsedAnalysis(null);
+			setMatches([]);
+			setDbItems([]);
 			setLoading(true);
 			try {
 				const queryParam = itemId
@@ -102,7 +106,6 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 		}
 
 		fetchReceipt();
-		setAnalysis(null);
 	}, [open, itemId, receiptId]);
 
 	const handleAnalyze = async (imageBase64: string) => {
@@ -123,21 +126,16 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 				if (analysisText === "ERROR")
 					throw new Error("Failed to analyze receipt");
 				const analysis = JSON.parse(analysisText);
-
-				console.log("Analysis:", analysis);
-
-				// Generate embeddings for each analysis item with error handling
 				const analysisItemsWithEmbeddings = (
 					await Promise.all(
 						analysis.items.map(async (item: AnalysisItem) => {
 							try {
-								// const embedding = await generateEmbedding(item.name);
 								const response = await fetch("/api/openai", {
 									method: "POST",
 									headers: {
 										"Content-Type": "application/json",
 									},
-									body: JSON.stringify({ text: item.name }),
+									body: JSON.stringify({ text: item.name + item.description }),
 								});
 
 								if (!response.ok) {
@@ -151,19 +149,14 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 								if (embedding.length === 0) {
 									throw new Error("Empty embedding");
 								}
-								// Ensure embedding is a number array
 								if (!embedding.every((val) => typeof val === "number")) {
 									throw new Error("Embedding contains non-numeric values");
 								}
-								// Ensure embedding length is consistent
 								if (embedding.length !== 1536) {
 									throw new Error(
 										`Embedding length is ${embedding.length}, expected 1536`,
 									);
 								}
-								// console.log("Embedding:", embedding);
-
-								console.log("THis embedding:", embedding.length);
 								return { ...item, embedding };
 							} catch (error) {
 								console.error(
@@ -177,51 +170,23 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 					)
 				).filter((item): item is AnalysisItem => item !== null);
 
-				console.log(
-					"Analysis items with embeddings:",
-					analysisItemsWithEmbeddings,
-				);
-
-				// fetch where checked is false
 				const itemsResponse = await fetch("/api/items?checked=false");
 				const dbItems: DbItem[] = await itemsResponse.json();
-
-				console.log("Database items with embeddings:", dbItems);
-				console.log(
-					"Analysis items with embeddings:",
-					analysisItemsWithEmbeddings,
-				);
-
 				const foundMatches = [];
 				for (const analysisItem of analysisItemsWithEmbeddings) {
 					let matchFound = false;
 					for (const dbItem of dbItems) {
-						// parse dbItem.vector as number[], since it is in string now.
 						const parsedVector = JSON.parse(dbItem?.vector || "[]");
 						const similarity = cosineSimilarity(
 							analysisItem.embedding,
 							parsedVector,
 						);
 
-						console.log("Cosine similarity:", similarity);
-
 						if (similarity > 0.5) {
-							console.log(
-								"Checking for similar item against database:",
-								dbItem.name,
-							);
-							console.log("Match found for:", analysisItem.name);
-							console.log("Similarity:", similarity);
 							foundMatches.push({ analysisItem, dbItem });
 							matchFound = true;
 							break;
 						}
-						console.log(
-							"Checking for similar item against database:",
-							dbItem.name,
-						);
-						console.log("No match found for:", analysisItem.name);
-						console.log("Similarity:", similarity);
 					}
 
 					if (!matchFound) {
@@ -234,8 +199,6 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 					embeddings: analysisItemsWithEmbeddings.map((item) => item.embedding),
 				});
 
-				console.log("Found matches:", foundMatches);
-
 				setMatches(foundMatches);
 				setDbItems(dbItems);
 			}
@@ -246,25 +209,6 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 			setAnalyzing(false);
 		}
 	};
-
-	const handleUploadAndAnalyze = async (croppedImage: string) => {
-		try {
-			const response = await fetch("/api/receipts", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ imageBase64: croppedImage, itemId: itemId }),
-			});
-
-			if (response.ok) {
-				const { imageBase64 } = await response.json();
-				await handleAnalyze(imageBase64);
-			}
-		} catch (error) {
-			console.error("Error uploading receipt:", error);
-		}
-	};
-
-	// Calculate selected items count for UI feedback
 	const selectedItemsCount = matches.filter(
 		(match) => match.dbItem !== null,
 	).length;
@@ -381,7 +325,6 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 																		},
 																		body: JSON.stringify({
 																			name: analysisItem.name,
-																			price: analysisItem.price,
 																			checked: false,
 																		}),
 																	});
@@ -417,7 +360,8 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 														<option value="ignore">Ignore this item</option>
 														{match?.dbItem && (
 															<option value={match.dbItem.id}>
-																{match.dbItem.name} (${match.dbItem.price})
+																{match.dbItem.name} (${match.analysisItem.price}
+																)
 															</option>
 														)}
 														<option value="new">
@@ -430,7 +374,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 															)
 															.map((item) => (
 																<option key={item.id} value={item.id}>
-																	{item.name} (${item.price})
+																	{item.name}
 																</option>
 															))}
 													</select>
@@ -491,73 +435,88 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 							className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
 							onClick={async () => {
 								try {
-									console.log("Button clicked, processing matches:", matches);
-									console.log("Selected payer:", selectedPayer);
-									console.log("Receipt:", receipt);
-
-									// Check if there are any valid matches to process
 									const validMatches = matches.filter(
 										(match) => match.dbItem !== null,
 									);
-									console.log("Valid matches to process:", validMatches.length);
-
 									if (validMatches.length === 0) {
 										console.warn("No valid matches to process");
 										return;
 									}
 
-									const results = await Promise.all(
-										validMatches.map(async (match) => {
-											try {
-												const dbItem = match.dbItem;
-												if (!dbItem) return null; // Extra safeguard
+									// Group matches by dbItem.id and calculate sum of prices
+									const groupedMatches = validMatches.reduce(
+										(acc, match) => {
+											if (!match.dbItem) return acc;
 
-												console.log(
-													`Processing item: ${dbItem.name} (ID: ${dbItem.id})`,
-												);
-
-												// Update requestBody to make personId optional
-												const requestBody = {
-													id: dbItem.id,
-													checked: true,
-													// Only include personId if it's selected
-													...(selectedPayer && { personId: selectedPayer }),
-													receiptId: receipt?.id,
-													price: match.analysisItem.price,
-													checked_at: new Date().toISOString(),
+											const dbItemId = match.dbItem.id;
+											if (!acc[dbItemId]) {
+												acc[dbItemId] = {
+													dbItem: match.dbItem,
+													totalPrice: 0,
+													matchCount: 0,
 												};
-
-												console.log("Request payload:", requestBody);
-
-												const response = await fetch("/api/items", {
-													method: "PUT",
-													headers: { "Content-Type": "application/json" },
-													body: JSON.stringify(requestBody),
-												});
-
-												if (!response.ok) {
-													const errorText = await response.text();
-													console.error(
-														`API error (${response.status}):`,
-														errorText,
-													);
-													throw new Error(
-														`API returned ${response.status}: ${errorText}`,
-													);
-												}
-
-												const result = await response.json();
-												console.log("API response:", result);
-												return result;
-											} catch (error) {
-												console.error("Error processing match:", match, error);
-												throw error; // Re-throw to be caught by the outer catch
 											}
-										}),
+
+											// Add this match's price to the total
+											acc[dbItemId].totalPrice +=
+												match.analysisItem.price || match.dbItem.price;
+											acc[dbItemId].matchCount += 1;
+
+											return acc;
+										},
+										{} as Record<
+											number,
+											{ dbItem: DbItem; totalPrice: number; matchCount: number }
+										>,
 									);
 
-									console.log("All items processed:", results);
+									// Process each grouped item with a single PUT request
+									const results = await Promise.all(
+										Object.values(groupedMatches).map(
+											async ({ dbItem, totalPrice, matchCount }) => {
+												try {
+													console.log(
+														`Processing ${matchCount} matches for ${dbItem.name} with total price $${totalPrice}`,
+													);
 
+													const requestBody = {
+														id: dbItem.id,
+														checked: true,
+														...(selectedPayer && { personId: selectedPayer }),
+														receiptId: receipt?.id,
+														price: totalPrice, // Use the summed price
+														checked_at: new Date().toISOString(),
+													};
+
+													const response = await fetch("/api/items", {
+														method: "PUT",
+														headers: { "Content-Type": "application/json" },
+														body: JSON.stringify(requestBody),
+													});
+
+													if (!response.ok) {
+														const errorText = await response.text();
+														console.error(
+															`API error (${response.status}):`,
+															errorText,
+														);
+														throw new Error(
+															`API returned ${response.status}: ${errorText}`,
+														);
+													}
+
+													return await response.json();
+												} catch (error) {
+													console.error(
+														"Error processing grouped item:",
+														dbItem,
+														error,
+													);
+													throw error;
+												}
+											},
+										),
+									);
 									onClose();
 									setSelectedPayer("");
 
