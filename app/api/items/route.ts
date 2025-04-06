@@ -117,10 +117,6 @@ export async function POST(request: Request) {
 				`Embedding length is ${embedding.length}, expected 1536`,
 			);
 		}
-
-		console.log("Embeddino:", embedding.length);
-
-		// Store as JSON string in text column
 		const newItem = await db
 			.insert(items)
 			.values({

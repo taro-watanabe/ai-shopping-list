@@ -13,9 +13,6 @@ async function generateEmbedding(text: string) {
 export async function POST(request: Request) {
     try {
         const { text } = await request.json();
-
-        console.log("Received text:", text);
-
         if (!text) {
             return NextResponse.json(
                 { error: "Missing text data" },
@@ -24,9 +21,6 @@ export async function POST(request: Request) {
         }
 
         const embedding = await generateEmbedding(text);
-
-        console.log("Generated embedding:", embedding);
-
         return NextResponse.json({
             embedding,
         });

@@ -123,15 +123,10 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 				if (analysisText === "ERROR")
 					throw new Error("Failed to analyze receipt");
 				const analysis = JSON.parse(analysisText);
-
-				console.log("Analysis:", analysis);
-
-				// Generate embeddings for each analysis item with error handling
 				const analysisItemsWithEmbeddings = (
 					await Promise.all(
 						analysis.items.map(async (item: AnalysisItem) => {
 							try {
-								// const embedding = await generateEmbedding(item.name);
 								const response = await fetch("/api/openai", {
 									method: "POST",
 									headers: {
@@ -151,19 +146,14 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 								if (embedding.length === 0) {
 									throw new Error("Empty embedding");
 								}
-								// Ensure embedding is a number array
 								if (!embedding.every((val) => typeof val === "number")) {
 									throw new Error("Embedding contains non-numeric values");
 								}
-								// Ensure embedding length is consistent
 								if (embedding.length !== 1536) {
 									throw new Error(
 										`Embedding length is ${embedding.length}, expected 1536`,
 									);
 								}
-								// console.log("Embedding:", embedding);
-
-								console.log("THis embedding:", embedding.length);
 								return { ...item, embedding };
 							} catch (error) {
 								console.error(
@@ -177,51 +167,23 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 					)
 				).filter((item): item is AnalysisItem => item !== null);
 
-				console.log(
-					"Analysis items with embeddings:",
-					analysisItemsWithEmbeddings,
-				);
-
-				// fetch where checked is false
 				const itemsResponse = await fetch("/api/items?checked=false");
 				const dbItems: DbItem[] = await itemsResponse.json();
-
-				console.log("Database items with embeddings:", dbItems);
-				console.log(
-					"Analysis items with embeddings:",
-					analysisItemsWithEmbeddings,
-				);
-
 				const foundMatches = [];
 				for (const analysisItem of analysisItemsWithEmbeddings) {
 					let matchFound = false;
 					for (const dbItem of dbItems) {
-						// parse dbItem.vector as number[], since it is in string now.
 						const parsedVector = JSON.parse(dbItem?.vector || "[]");
 						const similarity = cosineSimilarity(
 							analysisItem.embedding,
 							parsedVector,
 						);
 
-						console.log("Cosine similarity:", similarity);
-
 						if (similarity > 0.5) {
-							console.log(
-								"Checking for similar item against database:",
-								dbItem.name,
-							);
-							console.log("Match found for:", analysisItem.name);
-							console.log("Similarity:", similarity);
 							foundMatches.push({ analysisItem, dbItem });
 							matchFound = true;
 							break;
 						}
-						console.log(
-							"Checking for similar item against database:",
-							dbItem.name,
-						);
-						console.log("No match found for:", analysisItem.name);
-						console.log("Similarity:", similarity);
 					}
 
 					if (!matchFound) {
@@ -234,8 +196,6 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 					embeddings: analysisItemsWithEmbeddings.map((item) => item.embedding),
 				});
 
-				console.log("Found matches:", foundMatches);
-
 				setMatches(foundMatches);
 				setDbItems(dbItems);
 			}
@@ -246,25 +206,6 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 			setAnalyzing(false);
 		}
 	};
-
-	const handleUploadAndAnalyze = async (croppedImage: string) => {
-		try {
-			const response = await fetch("/api/receipts", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ imageBase64: croppedImage, itemId: itemId }),
-			});
-
-			if (response.ok) {
-				const { imageBase64 } = await response.json();
-				await handleAnalyze(imageBase64);
-			}
-		} catch (error) {
-			console.error("Error uploading receipt:", error);
-		}
-	};
-
-	// Calculate selected items count for UI feedback
 	const selectedItemsCount = matches.filter(
 		(match) => match.dbItem !== null,
 	).length;
@@ -491,16 +432,9 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 							className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
 							onClick={async () => {
 								try {
-									console.log("Button clicked, processing matches:", matches);
-									console.log("Selected payer:", selectedPayer);
-									console.log("Receipt:", receipt);
-
-									// Check if there are any valid matches to process
 									const validMatches = matches.filter(
 										(match) => match.dbItem !== null,
 									);
-									console.log("Valid matches to process:", validMatches.length);
-
 									if (validMatches.length === 0) {
 										console.warn("No valid matches to process");
 										return;
@@ -512,11 +446,6 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 												const dbItem = match.dbItem;
 												if (!dbItem) return null; // Extra safeguard
 
-												console.log(
-													`Processing item: ${dbItem.name} (ID: ${dbItem.id})`,
-												);
-
-												// Update requestBody to make personId optional
 												const requestBody = {
 													id: dbItem.id,
 													checked: true,
@@ -526,8 +455,6 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 													price: match.analysisItem.price,
 													checked_at: new Date().toISOString(),
 												};
-
-												console.log("Request payload:", requestBody);
 
 												const response = await fetch("/api/items", {
 													method: "PUT",
@@ -547,7 +474,6 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 												}
 
 												const result = await response.json();
-												console.log("API response:", result);
 												return result;
 											} catch (error) {
 												console.error("Error processing match:", match, error);
@@ -555,9 +481,6 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 											}
 										}),
 									);
-
-									console.log("All items processed:", results);
-
 									onClose();
 									setSelectedPayer("");
 

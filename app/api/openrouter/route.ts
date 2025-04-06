@@ -49,9 +49,6 @@ Receipt image:
 				}
 			],
 		});
-
-		console.log("OpenRouter API response:", completion);
-
 		return NextResponse.json({
 			analysis: completion.choices[0].message.content
 		});
