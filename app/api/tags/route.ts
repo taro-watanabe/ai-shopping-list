@@ -3,14 +3,25 @@ import { tags } from "@/db/schema";
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 
-export async function GET() {
-	const allTags = await db.select().from(tags).where(eq(tags.deleted, false));
-	return NextResponse.json(allTags);
+export async function GET(request: Request) {
+	const { searchParams } = new URL(request.url);
+	const tagIds = searchParams
+		.getAll("tagId")
+		.map(Number)
+		.filter((id) => !Number.isNaN(id));
+
+	let tagsArray = await db.select().from(tags).where(eq(tags.deleted, false));
+
+	if (tagIds.length > 0) {
+		tagsArray = tagsArray.filter((tag) => tagIds.includes(tag.id));
+	}
+
+	return NextResponse.json(tagsArray);
 }
 
 export async function POST(request: Request) {
 	const { name, color } = await request.json();
-  
+
 	if (!name || !color || !/^[a-fA-F0-9]{6}$/.test(color)) {
 		return NextResponse.json({ error: "Invalid tag data" }, { status: 400 });
 	}
