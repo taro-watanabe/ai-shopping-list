@@ -117,7 +117,8 @@ export const ItemDescriptionModal: React.FC<ItemDescriptionModalProps> = ({
 					}
 					// If it's already an array, use it directly
 					else if (Array.isArray(analysis.descriptions)) {
-						processedDescriptions = analysis.descriptions.map((desc) =>
+						// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+						processedDescriptions = analysis.descriptions.map((desc: any) =>
 							typeof desc === "string" ? desc : JSON.stringify(desc),
 						);
 					}
