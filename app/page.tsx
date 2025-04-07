@@ -543,24 +543,32 @@ export default function Home() {
 			<ReceiptUploadModal
 				open={uploadModalOpen}
 				onClose={() => setUploadModalOpen(false)}
-				onUpload={(imageData) => {
-					fetch("/api/receipts", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							imageBase64: imageData,
-							personId: null,
-							price: 0,
-							itemId: null,
-						}),
-					})
-						.then((response) => response.json())
-						.then((receipt) => {
-							queryClient.invalidateQueries({ queryKey: ["items"] });
-							setItemToCheck(null); // Clear itemId
-							setViewReceiptId(receipt.id); // Set the receipt ID
-							setReceiptViewModalOpen(true); // Open ReceiptViewModal instead of ReceiptViewOnlyModal
+				onUpload={async (imageData) => {
+					try {
+						const response = await fetch("/api/receipts", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								imageBase64: imageData,
+								personId: null,
+								price: 0,
+								itemId: null,
+							}),
 						});
+
+						if (!response.ok) {
+							throw new Error(`Upload failed with status: ${response.status}`);
+						}
+
+						const receipt = await response.json();
+						queryClient.invalidateQueries({ queryKey: ["items"] });
+						setItemToCheck(null); // Clear itemId
+						setViewReceiptId(receipt.id); // Set the receipt ID
+						setReceiptViewModalOpen(true); // Open ReceiptViewModal
+					} catch (error) {
+						console.error("Error uploading receipt:", error);
+						throw error; // Re-throw to let the modal handle the error state
+					}
 				}}
 			/>
 		</main>
