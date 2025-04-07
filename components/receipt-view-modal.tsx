@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 interface AnalysisItem {
 	name: string;
 	price: number;
+	description: string;
 	embedding: number[];
 }
 
@@ -134,7 +135,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 									headers: {
 										"Content-Type": "application/json",
 									},
-									body: JSON.stringify({ text: item.name }),
+									body: JSON.stringify({ text: item.name + item.description }),
 								});
 
 								if (!response.ok) {
@@ -181,7 +182,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 							parsedVector,
 						);
 
-						if (similarity > 0.3) {
+						if (similarity > 0.5) {
 							foundMatches.push({ analysisItem, dbItem });
 							matchFound = true;
 							break;
