@@ -294,7 +294,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 												className={`border ${isSelected ? "bg-blue-50" : ""}`}
 											>
 												<td className="p-2 border">
-													{analysisItem.name} (${analysisItem.price})
+													{analysisItem.name} (€{analysisItem.price})
 												</td>
 												<td className="p-2 border">
 													<select
@@ -360,7 +360,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 														<option value="ignore">Ignore this item</option>
 														{match?.dbItem && (
 															<option value={match.dbItem.id}>
-																{match.dbItem.name} (${match.analysisItem.price}
+																{match.dbItem.name} (€{match.analysisItem.price}
 																)
 															</option>
 														)}
