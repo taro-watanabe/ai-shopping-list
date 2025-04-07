@@ -181,7 +181,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 							parsedVector,
 						);
 
-						if (similarity > 0.5) {
+						if (similarity > 0.3) {
 							foundMatches.push({ analysisItem, dbItem });
 							matchFound = true;
 							break;
