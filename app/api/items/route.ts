@@ -1,8 +1,8 @@
 import { db } from "@/db";
 import { items, tags, people, receipts } from "@/db/schema";
-import { eq, inArray, or, and, type SQL, exists, isNotNull } from "drizzle-orm";
+import { eq, inArray, and, type SQL, isNotNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { generateEmbedding } from "../openai/route";
+import { generateEmbedding } from "@/lib/openai";
 
 export async function GET(request: Request) {
 	const { searchParams } = new URL(request.url);
