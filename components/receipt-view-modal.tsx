@@ -443,46 +443,79 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 										return;
 									}
 
-									const results = await Promise.all(
-										validMatches.map(async (match) => {
-											try {
-												const dbItem = match.dbItem;
-												if (!dbItem) return null; // Extra safeguard
+									// Group matches by dbItem.id and calculate sum of prices
+									const groupedMatches = validMatches.reduce(
+										(acc, match) => {
+											if (!match.dbItem) return acc;
 
-												const requestBody = {
-													id: dbItem.id,
-													checked: true,
-													// Only include personId if it's selected
-													...(selectedPayer && { personId: selectedPayer }),
-													receiptId: receipt?.id,
-													price: match.analysisItem.price || dbItem.price,
-													checked_at: new Date().toISOString(),
+											const dbItemId = match.dbItem.id;
+											if (!acc[dbItemId]) {
+												acc[dbItemId] = {
+													dbItem: match.dbItem,
+													totalPrice: 0,
+													matchCount: 0,
 												};
-
-												const response = await fetch("/api/items", {
-													method: "PUT",
-													headers: { "Content-Type": "application/json" },
-													body: JSON.stringify(requestBody),
-												});
-
-												if (!response.ok) {
-													const errorText = await response.text();
-													console.error(
-														`API error (${response.status}):`,
-														errorText,
-													);
-													throw new Error(
-														`API returned ${response.status}: ${errorText}`,
-													);
-												}
-
-												const result = await response.json();
-												return result;
-											} catch (error) {
-												console.error("Error processing match:", match, error);
-												throw error; // Re-throw to be caught by the outer catch
 											}
-										}),
+
+											// Add this match's price to the total
+											acc[dbItemId].totalPrice +=
+												match.analysisItem.price || match.dbItem.price;
+											acc[dbItemId].matchCount += 1;
+
+											return acc;
+										},
+										{} as Record<
+											number,
+											{ dbItem: DbItem; totalPrice: number; matchCount: number }
+										>,
+									);
+
+									// Process each grouped item with a single PUT request
+									const results = await Promise.all(
+										Object.values(groupedMatches).map(
+											async ({ dbItem, totalPrice, matchCount }) => {
+												try {
+													console.log(
+														`Processing ${matchCount} matches for ${dbItem.name} with total price $${totalPrice}`,
+													);
+
+													const requestBody = {
+														id: dbItem.id,
+														checked: true,
+														...(selectedPayer && { personId: selectedPayer }),
+														receiptId: receipt?.id,
+														price: totalPrice, // Use the summed price
+														checked_at: new Date().toISOString(),
+													};
+
+													const response = await fetch("/api/items", {
+														method: "PUT",
+														headers: { "Content-Type": "application/json" },
+														body: JSON.stringify(requestBody),
+													});
+
+													if (!response.ok) {
+														const errorText = await response.text();
+														console.error(
+															`API error (${response.status}):`,
+															errorText,
+														);
+														throw new Error(
+															`API returned ${response.status}: ${errorText}`,
+														);
+													}
+
+													return await response.json();
+												} catch (error) {
+													console.error(
+														"Error processing grouped item:",
+														dbItem,
+														error,
+													);
+													throw error;
+												}
+											},
+										),
 									);
 									onClose();
 									setSelectedPayer("");
