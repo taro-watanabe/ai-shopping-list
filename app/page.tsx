@@ -6,7 +6,7 @@ import { PersonSelectModal } from "@/components/person-select-modal";
 import { ReceiptViewModal } from "@/components/receipt-view-modal";
 import { ReceiptUploadModal } from "@/components/receipt-upload-modal";
 import { ReceiptViewOnlyModal } from "@/components/receipt-viewonly-modal";
-import { view } from "drizzle-orm/sqlite-core";
+import { ItemDescriptionModal } from "@/components/item-description-modal";
 
 async function fetchItems({
 	include = "person",
@@ -45,11 +45,15 @@ async function fetchPeople() {
 	return response.json();
 }
 
-async function addItem({ name, tagId }: { name: string; tagId?: number }) {
+async function addItem({
+	name,
+	tagId,
+	description,
+}: { name: string; tagId?: number; description?: string }) {
 	const response = await fetch("/api/items", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ name, tagId }),
+		body: JSON.stringify({ name, tagId, description }),
 	});
 	return response.json();
 }
@@ -108,6 +112,8 @@ export default function Home() {
 		name: string;
 	} | null>(null);
 	const [viewReceiptId, setViewReceiptId] = useState<number | null>(null);
+	const [descriptionModalOpen, setDescriptionModalOpen] = useState(false); // For ItemDescriptionModal
+	const [itemToAdd, setItemToAdd] = useState("");
 
 	// Update query to include filter parameters
 	const { data: items = [], isLoading: itemsLoading } = useQuery({
@@ -432,10 +438,8 @@ export default function Home() {
 				onSubmit={(e) => {
 					e.preventDefault();
 					if (newItem.trim()) {
-						addMutation.mutate({
-							name: newItem,
-							tagId: selectedTagId || undefined,
-						});
+						setItemToAdd(newItem);
+						setDescriptionModalOpen(true);
 					}
 				}}
 				className="mb-4 space-y-2"
@@ -508,6 +512,21 @@ export default function Home() {
 				</div>
 			</div>
 
+			<ItemDescriptionModal
+				open={descriptionModalOpen}
+				onClose={() => setDescriptionModalOpen(false)}
+				itemName={itemToAdd}
+				selectedTagId={selectedTagId}
+				onConfirm={(name, tagId, description) => {
+					addMutation.mutate({
+						name,
+						tagId: tagId || undefined,
+						description: description || undefined,
+					});
+					setDescriptionModalOpen(false);
+				}}
+			/>
+
 			<PersonSelectModal
 				open={modalOpen}
 				onClose={() => setModalOpen(false)}
@@ -543,24 +562,32 @@ export default function Home() {
 			<ReceiptUploadModal
 				open={uploadModalOpen}
 				onClose={() => setUploadModalOpen(false)}
-				onUpload={(imageData) => {
-					fetch("/api/receipts", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							imageBase64: imageData,
-							personId: null,
-							price: 0,
-							itemId: null,
-						}),
-					})
-						.then((response) => response.json())
-						.then((receipt) => {
-							queryClient.invalidateQueries({ queryKey: ["items"] });
-							setItemToCheck(null); // Clear itemId
-							setViewReceiptId(receipt.id); // Set the receipt ID
-							setReceiptViewModalOpen(true); // Open ReceiptViewModal instead of ReceiptViewOnlyModal
+				onUpload={async (imageData) => {
+					try {
+						const response = await fetch("/api/receipts", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								imageBase64: imageData,
+								personId: null,
+								price: 0,
+								itemId: null,
+							}),
 						});
+
+						if (!response.ok) {
+							throw new Error(`Upload failed with status: ${response.status}`);
+						}
+
+						const receipt = await response.json();
+						queryClient.invalidateQueries({ queryKey: ["items"] });
+						setItemToCheck(null); // Clear itemId
+						setViewReceiptId(receipt.id); // Set the receipt ID
+						setReceiptViewModalOpen(true); // Open ReceiptViewModal
+					} catch (error) {
+						console.error("Error uploading receipt:", error);
+						throw error; // Re-throw to let the modal handle the error state
+					}
 				}}
 			/>
 		</main>

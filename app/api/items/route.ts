@@ -1,7 +1,8 @@
 import { db } from "@/db";
 import { items, tags, people, receipts } from "@/db/schema";
-import { eq, inArray, or, and, type SQL, exists, isNotNull } from "drizzle-orm";
+import { eq, inArray, and, type SQL, isNotNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { generateEmbedding } from "@/lib/openai";
 
 export async function GET(request: Request) {
 	const { searchParams } = new URL(request.url);
@@ -34,10 +35,10 @@ export async function GET(request: Request) {
 			personId: items.personId,
 			person: include?.includes("person")
 				? {
-					id: people.id,
-					name: people.name,
-					color: people.color,
-				}
+						id: people.id,
+						name: people.name,
+						color: people.color,
+					}
 				: {},
 			price: items.price,
 			receiptId: items.receiptId,
@@ -84,43 +85,27 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-	const { name, tagId, personId } = await request.json();
+	const { name, description, tagId, personId } = await request.json();
 
 	try {
-		// Generate embedding for the item name
-		const response = await fetch("/api/openai", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({ text: name }),
-		});
-
-		if (!response.ok) {
-			throw new Error("Failed to generate embedding");
-		}
-		const embeddingData = await response.json();
-		const embedding = embeddingData.embedding;
+		const embedding = await generateEmbedding(`${name} ${description || ""}`);
 		if (!Array.isArray(embedding)) {
 			throw new Error("Invalid embedding format");
 		}
 		if (embedding.length === 0) {
 			throw new Error("Empty embedding");
 		}
-		// Ensure embedding is a number array
 		if (!embedding.every((val) => typeof val === "number")) {
 			throw new Error("Embedding contains non-numeric values");
 		}
-		// Ensure embedding length is consistent
 		if (embedding.length !== 1536) {
-			throw new Error(
-				`Embedding length is ${embedding.length}, expected 1536`,
-			);
+			throw new Error(`Embedding length is ${embedding.length}, expected 1536`);
 		}
 		const newItem = await db
 			.insert(items)
 			.values({
 				name,
+				description: description || null,
 				tagId: tagId ? Number(tagId) : null,
 				personId: personId ? Number(personId) : null,
 				vector: JSON.stringify(embedding),
@@ -128,11 +113,12 @@ export async function POST(request: Request) {
 			.returning({
 				id: items.id,
 				name: items.name,
+				description: items.description,
 				checked: items.checked,
 				createdAt: items.createdAt,
 				tagId: items.tagId,
 				personId: items.personId,
-				vector: items.vector
+				vector: items.vector,
 			});
 
 		return NextResponse.json(newItem[0]);
@@ -140,7 +126,7 @@ export async function POST(request: Request) {
 		console.error("Failed to generate embedding:", error);
 		return NextResponse.json(
 			{ error: "Failed to create item with embedding" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }
@@ -154,7 +140,7 @@ export async function PUT(request: Request) {
 		if (price !== undefined && Number.isNaN(Number(price))) {
 			return NextResponse.json(
 				{ error: "Invalid price format" },
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -172,7 +158,6 @@ export async function PUT(request: Request) {
 			...(price !== undefined && { price: Number(price) }),
 			...(receiptId && { receiptId: Number(receiptId) }),
 			checkedAt: checked ? new Date().toISOString() : null,
-
 		};
 
 		if (personId === 0) {
@@ -199,7 +184,7 @@ export async function PUT(request: Request) {
 
 		return NextResponse.json({
 			...updatedItem[0],
-			vector: updatedItem[0].vector
+			vector: updatedItem[0].vector,
 		});
 	} catch (error) {
 		console.error("Error updating item:", error);

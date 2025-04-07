@@ -40,4 +40,5 @@ export const items = sqliteTable("items", {
 	price: real("price"),
 	checkedAt: text("checked_at"),
 	receiptId: integer("receipt_id").references(() => receipts.id), // Add this new field
+	description: text("description"),
 });
