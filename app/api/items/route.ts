@@ -85,10 +85,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-	const { name, tagId, personId } = await request.json();
+	const { name, description, tagId, personId } = await request.json();
 
 	try {
-		const embedding = await generateEmbedding(name);
+		const embedding = await generateEmbedding(`${name} ${description || ""}`);
 		if (!Array.isArray(embedding)) {
 			throw new Error("Invalid embedding format");
 		}
@@ -105,6 +105,7 @@ export async function POST(request: Request) {
 			.insert(items)
 			.values({
 				name,
+				description: description || null,
 				tagId: tagId ? Number(tagId) : null,
 				personId: personId ? Number(personId) : null,
 				vector: JSON.stringify(embedding),
@@ -112,6 +113,7 @@ export async function POST(request: Request) {
 			.returning({
 				id: items.id,
 				name: items.name,
+				description: items.description,
 				checked: items.checked,
 				createdAt: items.createdAt,
 				tagId: items.tagId,
