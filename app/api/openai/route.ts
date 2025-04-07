@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
 
-async function generateEmbedding(text: string) {
+export async function generateEmbedding(text: string) {
     const response = await openai.embeddings.create({
         model: "text-embedding-3-small",
         input: text,

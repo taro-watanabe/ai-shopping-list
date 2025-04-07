@@ -82,7 +82,10 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 	useEffect(() => {
 		async function fetchReceipt() {
 			if (!open || (!itemId && !receiptId)) return;
-
+			setAnalysis(null);
+			setParsedAnalysis(null);
+			setMatches([]);
+			setDbItems([]);
 			setLoading(true);
 			try {
 				const queryParam = itemId
@@ -102,7 +105,6 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 		}
 
 		fetchReceipt();
-		setAnalysis(null);
 	}, [open, itemId, receiptId]);
 
 	const handleAnalyze = async (imageBase64: string) => {
@@ -322,7 +324,6 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 																		},
 																		body: JSON.stringify({
 																			name: analysisItem.name,
-																			price: analysisItem.price,
 																			checked: false,
 																		}),
 																	});
@@ -358,7 +359,8 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 														<option value="ignore">Ignore this item</option>
 														{match?.dbItem && (
 															<option value={match.dbItem.id}>
-																{match.dbItem.name} (${match.dbItem.price})
+																{match.dbItem.name} (${match.analysisItem.price}
+																)
 															</option>
 														)}
 														<option value="new">
@@ -371,7 +373,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 															)
 															.map((item) => (
 																<option key={item.id} value={item.id}>
-																	{item.name} (${item.price})
+																	{item.name}
 																</option>
 															))}
 													</select>
@@ -452,7 +454,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 													// Only include personId if it's selected
 													...(selectedPayer && { personId: selectedPayer }),
 													receiptId: receipt?.id,
-													price: match.analysisItem.price,
+													price: match.analysisItem.price || dbItem.price,
 													checked_at: new Date().toISOString(),
 												};
 
