@@ -1,0 +1,31 @@
+# You can specify these two keys location like this, where the target file
+# solely contains the key like "sk-xxxxxx"
+# This is the RECOMMENDED way to use the keys especially if you plan to expose
+# the app to the public through a VPS, etc. (so you can chmod the actual keys to 400 or sth)
+
+```
+OPENROUTER_API_KEY_PATH=/put/absolute/path/to/your/openrouter_api_key
+OPENAI_API_KEY_PATH=/put/absolute/path/to/your/openai_api_key
+```
+
+
+# Alternatively, you can specify the keys directly like this (not recommended for production)
+
+```
+OPENROUTER_API_KEY=sk-xxxxxx
+OPENAI_API_KEY=sk-xxxxxx
+```
+
+# If you wish, you can change the "domicile country" and "language" (in natural language)
+# and the currency in string (Symbol works best).
+# This is NOT the navigation language, but is where you will use the app (do shopping)
+# The app is not meant to change currency midway. (will need to add a migration function for it, may add)
+# English will always be used for navigation, as well as the AI analysis, since LLMs work best in English most of the time.
+# Leave the DOMICILE_LANGUAGE empty if you want English.
+
+```
+DOMICILE_COUNTRY=Italy
+DOMICILE_LANGUAGE=Italian
+CURRENCY=€
+```
+

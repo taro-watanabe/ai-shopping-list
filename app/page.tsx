@@ -8,6 +8,8 @@ import { ReceiptUploadModal } from "@/components/receipt-upload-modal";
 import { ReceiptViewOnlyModal } from "@/components/receipt-viewonly-modal";
 import { ItemDescriptionModal } from "@/components/item-description-modal";
 
+const currency = process.env.CURRENCY || "€";
+
 async function fetchItems({
 	include = "person",
 	tagIds = [],
@@ -321,7 +323,8 @@ export default function Home() {
 						</span>
 						{item.price && (
 							<span className="text-sm text-gray-600">
-								€{item.price.toFixed(2)}
+								{currency}
+								{item.price.toFixed(2)}
 							</span>
 						)}
 					</div>
@@ -427,9 +430,8 @@ export default function Home() {
 		(item: { checked: boolean }) => item.checked,
 	);
 
-	const uncheckedTotal = calculateTotal(filteredUncheckedItems);
 	const checkedTotal = calculateTotal(filteredCheckedItems);
-	const grandTotal = uncheckedTotal + checkedTotal;
+
 	return (
 		<main className="p-4 max-w-md mx-auto">
 			<h1 className="text-2xl font-bold mb-4">Shopping List</h1>
@@ -497,17 +499,12 @@ export default function Home() {
 
 			<div className="mt-8 pt-4 border-t">
 				<div className="bg-gray-50 p-4 rounded border">
-					<div className="flex justify-between items-center mb-2">
-						<span>Pending Items:</span>
-						<span className="font-medium">€{uncheckedTotal.toFixed(2)}</span>
-					</div>
-					<div className="flex justify-between items-center mb-2">
-						<span>Checked Items:</span>
-						<span className="font-medium">€{checkedTotal.toFixed(2)}</span>
-					</div>
-					<div className="flex justify-between items-center pt-2 border-t border-gray-300 mt-2">
-						<span className="font-semibold">Total:</span>
-						<span className="font-bold">€{grandTotal.toFixed(2)}</span>
+					<div className="flex justify-between items-center">
+						<span className="font-semibold">Total (Checked Items):</span>
+						<span className="font-bold">
+							{currency}
+							{checkedTotal.toFixed(2)}
+						</span>
 					</div>
 				</div>
 			</div>

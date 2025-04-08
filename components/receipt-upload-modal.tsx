@@ -2,6 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 
+// Maximum width or height for the compressed image
+const MAX_DIMENSION = 800;
+const COMPRESSION_QUALITY = 0.2;
+
 interface ReceiptUploadModalProps {
 	open: boolean;
 	onClose: () => void;
@@ -16,6 +20,7 @@ export function ReceiptUploadModal({
 	const [preview, setPreview] = useState<string | null>(null);
 	const [uploading, setUploading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [fileName, setFileName] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	// Reset state when modal closes
@@ -24,24 +29,85 @@ export function ReceiptUploadModal({
 			setPreview(null);
 			setUploading(false);
 			setError(null);
+			setFileName(null);
 			if (fileInputRef.current) {
 				fileInputRef.current.value = "";
 			}
 		}
 	}, [open]);
 
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (file) {
+	// Compress image and return base64
+	const compressImage = (file: File): Promise<string> => {
+		return new Promise((resolve, reject) => {
 			const reader = new FileReader();
 			reader.onload = (e) => {
-				if (e.target?.result) {
-					setPreview(e.target.result as string);
-					setError(null);
-				}
+				const img = new Image();
+				img.onload = () => {
+					// Calculate new dimensions while maintaining aspect ratio
+					let width = img.width;
+					let height = img.height;
+
+					if (width > height && width > MAX_DIMENSION) {
+						height = Math.round((height * MAX_DIMENSION) / width);
+						width = MAX_DIMENSION;
+					} else if (height > MAX_DIMENSION) {
+						width = Math.round((width * MAX_DIMENSION) / height);
+						height = MAX_DIMENSION;
+					}
+
+					// Create canvas and draw resized image
+					const canvas = document.createElement("canvas");
+					canvas.width = width;
+					canvas.height = height;
+					const ctx = canvas.getContext("2d");
+					if (!ctx) {
+						reject(new Error("Could not get canvas context"));
+						return;
+					}
+
+					ctx.drawImage(img, 0, 0, width, height);
+
+					// Get compressed base64 string
+					const compressed = canvas.toDataURL(
+						"image/jpeg",
+						COMPRESSION_QUALITY,
+					);
+					resolve(compressed);
+				};
+
+				img.onerror = (error) => {
+					reject(error);
+				};
+
+				img.src = e.target?.result as string;
 			};
+
+			reader.onerror = (error) => {
+				reject(error);
+			};
+
 			reader.readAsDataURL(file);
+		});
+	};
+
+	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (file) {
+			setFileName(file.name);
+			try {
+				// Compress the image before setting preview
+				const compressedImage = await compressImage(file);
+				setPreview(compressedImage);
+				setError(null);
+			} catch (err) {
+				console.error("Image compression failed:", err);
+				setError("Failed to process image. Please try again.");
+			}
 		}
+	};
+
+	const triggerFileInput = () => {
+		fileInputRef.current?.click();
 	};
 
 	const handleUpload = async () => {
@@ -68,14 +134,44 @@ export function ReceiptUploadModal({
 			<div className="bg-white rounded-lg p-6 w-full max-w-md">
 				<h2 className="text-xl font-bold mb-4">Upload Receipt</h2>
 
+				{/* Hidden file input */}
 				<input
 					ref={fileInputRef}
 					type="file"
 					accept="image/*"
 					onChange={handleFileChange}
-					className="mb-4"
+					className="hidden"
 					disabled={uploading}
 				/>
+
+				{/* Custom styled button */}
+				<div className="mb-4">
+					<button
+						type="button"
+						onClick={triggerFileInput}
+						className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 flex items-center"
+						disabled={uploading}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							className="h-5 w-5 mr-2"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+							/>
+						</svg>
+						Select Receipt Image
+					</button>
+					{fileName && (
+						<p className="mt-2 text-sm text-gray-600">Selected: {fileName}</p>
+					)}
+				</div>
 
 				{preview && (
 					<div className="mb-4">
