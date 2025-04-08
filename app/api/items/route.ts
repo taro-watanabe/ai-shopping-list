@@ -134,7 +134,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
 	try {
 		const body = await request.json();
-		const { id, checked, personId, price, receiptId } = body;
+		const { id, checked, personId, price, receiptId, tagId } = body;
 
 		// Validate price is a number if provided
 		if (price !== undefined && Number.isNaN(Number(price))) {
@@ -157,6 +157,7 @@ export async function PUT(request: Request) {
 			...(personId && { personId: Number(personId) }),
 			...(price !== undefined && { price: Number(price) }),
 			...(receiptId && { receiptId: Number(receiptId) }),
+			...(tagId && { tagId: Number(tagId) }),
 			checkedAt: checked ? new Date().toISOString() : null,
 		};
 
