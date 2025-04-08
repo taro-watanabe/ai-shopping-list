@@ -1,3 +1,21 @@
+# DATABASE
+# since this is a simple project, we use sqlite3 as the database
+# we have migrated to turso. os you may either: modify the code to use sqlite3 file
+# or use turso as the database.
+
+# You can specify these two keys location like this, where the target file
+# solely contains the info like libsql://your-database-url.turso.io
+# This is the RECOMMENDED way to use the keys especially if you plan to expose
+# the app to the public through a VPS, etc. (so you can chmod the actual keys to 400 or sth)
+
+TURSO_DATABASE_URL_PATH=/put/absolute/path/to/your/turso_database_url
+TURSO_AUTH_TOKEN=/put/absolute/path/to/your/turso_auth_token
+
+# Alternatively, you can specify the keys directly like this (not recommended for production)
+
+TURSO_DATABASE_URL=libsql://your-database-url.turso.io
+TURSO_AUTH_TOKEN=eyJh....
+
 # You can specify these two keys location like this, where the target file
 # solely contains the key like "sk-xxxxxx"
 # This is the RECOMMENDED way to use the keys especially if you plan to expose

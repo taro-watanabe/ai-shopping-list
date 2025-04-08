@@ -53,7 +53,7 @@ export default function TagsPage() {
 	});
 
 	return (
-		<main className="p-4 max-w-md mx-auto">
+		<main className="min-h-screen pt-16 px-4 max-w-4xl mx-auto">
 			<h1 className="text-2xl font-bold mb-4">Tags</h1>
 
 			<form

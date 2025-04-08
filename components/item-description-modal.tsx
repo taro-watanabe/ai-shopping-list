@@ -92,23 +92,22 @@ export const ItemDescriptionModal: React.FC<ItemDescriptionModalProps> = ({
 
 				const analysis = JSON.parse(analysisText);
 
-				// Handle the expected descriptions format
 				let processedDescriptions: string[] = [];
 
 				if (analysis.descriptions && Array.isArray(analysis.descriptions)) {
-					processedDescriptions = analysis.descriptions.map((descObj) => {
-						// Each item is expected to be an object with language keys
-						if (typeof descObj === "object" && descObj !== null) {
-							// Get all language keys (e.g., "en", "it")
-							const langKeys = Object.keys(descObj);
-							if (langKeys.length > 0) {
-								// Concatenate values from all language keys
-								return langKeys.map((key) => descObj[key]).join(" / ");
+					processedDescriptions = analysis.descriptions.map(
+						(descObj: Record<string, string>) => {
+							if (typeof descObj === "object" && descObj !== null) {
+								const langKeys = Object.keys(descObj);
+								if (langKeys.length > 0) {
+									return langKeys
+										.map((key: string) => descObj[key])
+										.join(" / ");
+								}
 							}
-						}
-						// Fallback if the format is unexpected
-						return JSON.stringify(descObj);
-					});
+							return JSON.stringify(descObj);
+						},
+					);
 				}
 
 				setDescriptions(processedDescriptions);

@@ -11,6 +11,7 @@
     "db:push": "drizzle-kit push --schema ./db/schema.ts --driver durable-sqlite --dialect sqlite"
   },
   "dependencies": {
+    "@libsql/client": "^0.15.7",
     "@tanstack/react-query": "^5.67.2",
     "@types/better-sqlite3": "^7.6.12",
     "better-sqlite3": "^11.8.1",
