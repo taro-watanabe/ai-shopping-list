@@ -92,36 +92,23 @@ export const ItemDescriptionModal: React.FC<ItemDescriptionModalProps> = ({
 
 				const analysis = JSON.parse(analysisText);
 
-				// Handle different formats of descriptions
+				// Handle the expected descriptions format
 				let processedDescriptions: string[] = [];
 
-				if (analysis.descriptions) {
-					// Check if descriptions is an object with language keys
-					if (
-						typeof analysis.descriptions === "object" &&
-						!Array.isArray(analysis.descriptions)
-					) {
-						// Extract descriptions from the first language (usually 'en')
-						const firstLangKey = Object.keys(analysis.descriptions)[0];
-						if (
-							analysis.descriptions[firstLangKey] &&
-							Array.isArray(analysis.descriptions[firstLangKey])
-						) {
-							processedDescriptions = analysis.descriptions[firstLangKey];
-						} else {
-							// If it's not an array, convert object values to an array of strings
-							processedDescriptions = Object.values(analysis.descriptions)
-								.filter((desc) => typeof desc === "string")
-								.map((desc) => String(desc));
+				if (analysis.descriptions && Array.isArray(analysis.descriptions)) {
+					processedDescriptions = analysis.descriptions.map((descObj) => {
+						// Each item is expected to be an object with language keys
+						if (typeof descObj === "object" && descObj !== null) {
+							// Get all language keys (e.g., "en", "it")
+							const langKeys = Object.keys(descObj);
+							if (langKeys.length > 0) {
+								// Concatenate values from all language keys
+								return langKeys.map((key) => descObj[key]).join(" / ");
+							}
 						}
-					}
-					// If it's already an array, use it directly
-					else if (Array.isArray(analysis.descriptions)) {
-						// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-						processedDescriptions = analysis.descriptions.map((desc: any) =>
-							typeof desc === "string" ? desc : JSON.stringify(desc),
-						);
-					}
+						// Fallback if the format is unexpected
+						return JSON.stringify(descObj);
+					});
 				}
 
 				setDescriptions(processedDescriptions);

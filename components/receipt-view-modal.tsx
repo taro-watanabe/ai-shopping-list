@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
+const currency = process.env.CURRENCY || "€";
+
 interface AnalysisItem {
 	name: string;
 	price: number;
@@ -65,6 +67,11 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 	const [selectedPayer, setSelectedPayer] = useState<string>("");
 	const [people, setPeople] = useState<{ id: string; name: string }[]>([]);
 	const [analyzing, setAnalyzing] = useState(false);
+	const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
+	const [selectedTag, setSelectedTag] = useState<string>("");
+	const [newlyCreatedItems, setNewlyCreatedItems] = useState<DbItem[]>([]);
+	const [bulkCreating, setBulkCreating] = useState(false);
+	const [bulkDeleting, setBulkDeleting] = useState(false);
 
 	useEffect(() => {
 		async function fetchPeople() {
@@ -78,6 +85,20 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 		}
 
 		fetchPeople();
+	}, []);
+
+	useEffect(() => {
+		async function fetchTags() {
+			try {
+				const response = await fetch("/api/tags");
+				const data = await response.json();
+				setTags(data);
+			} catch (error) {
+				console.error("Error fetching tags:", error);
+			}
+		}
+
+		fetchTags();
 	}, []);
 
 	useEffect(() => {
@@ -209,6 +230,95 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 			setAnalyzing(false);
 		}
 	};
+
+	const handleBulkAddNew = async () => {
+		setBulkCreating(true);
+		try {
+			const ignoredItems = matches.filter(
+				(item) => item.dbItem === null && item.analysisItem.price > 0,
+			);
+			if (ignoredItems.length === 0) {
+				return;
+			}
+
+			const createdItems: DbItem[] = [];
+
+			for (const match of ignoredItems) {
+				try {
+					const response = await fetch("/api/items", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							name: match.analysisItem.name,
+							checked: false,
+						}),
+					});
+					const newItem = await response.json();
+					createdItems.push(newItem);
+
+					setMatches((prev) =>
+						prev.map((m) =>
+							m.analysisItem === match.analysisItem
+								? { analysisItem: match.analysisItem, dbItem: newItem }
+								: m,
+						),
+					);
+				} catch (error) {
+					console.error("Error creating item:", error);
+				}
+			}
+
+			setDbItems((prev) => [...prev, ...createdItems]);
+			setNewlyCreatedItems((prev) => [...prev, ...createdItems]);
+		} catch (error) {
+			console.error("Error in bulk add:", error);
+		} finally {
+			setBulkCreating(false);
+		}
+	};
+
+	const handleUndoBulkAdd = async () => {
+		if (newlyCreatedItems.length === 0) return;
+
+		setBulkDeleting(true);
+		try {
+			for (const item of newlyCreatedItems) {
+				const id = item.id;
+				try {
+					await fetch("/api/items", {
+						method: "DELETE",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ id }),
+					});
+
+					setMatches((prev) =>
+						prev.map((m) =>
+							m.dbItem && m.dbItem.id === item.id
+								? { analysisItem: m.analysisItem, dbItem: null }
+								: m,
+						),
+					);
+				} catch (error) {
+					console.error("Error deleting item:", error);
+				}
+			}
+
+			setDbItems((prev) =>
+				prev.filter(
+					(item) =>
+						!newlyCreatedItems.some((newItem) => newItem.id === item.id),
+				),
+			);
+			setNewlyCreatedItems([]);
+		} catch (error) {
+			console.error("Error in bulk delete:", error);
+		} finally {
+			setBulkDeleting(false);
+		}
+	};
+
 	const selectedItemsCount = matches.filter(
 		(match) => match.dbItem !== null,
 	).length;
@@ -223,7 +333,6 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
 			<div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 				<h2 className="text-xl font-bold mb-4">Receipt Analysis</h2>
-
 				{receipt?.imageBase64 && (
 					<div className="mb-4">
 						<img
@@ -236,7 +345,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 
 				<div className="mb-4">
 					<label className="flex items-center mb-2">
-						<span>Payer (optional):</span>
+						<span>Who Paid? (optional):</span>
 					</label>
 					<select
 						className="w-full p-2 border rounded"
@@ -247,6 +356,24 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 						{people.map((person) => (
 							<option key={person.id} value={person.id}>
 								{person.name}
+							</option>
+						))}
+					</select>
+				</div>
+
+				<div className="mb-4">
+					<label className="flex items-center mb-2">
+						<span>Overwrite tag of checked items with (optional):</span>
+					</label>
+					<select
+						className="w-full p-2 border rounded"
+						value={selectedTag}
+						onChange={(e) => setSelectedTag(e.target.value)}
+					>
+						<option value="">No tag selected</option>
+						{tags.map((tag) => (
+							<option key={tag.id} value={tag.id}>
+								{tag.name}
 							</option>
 						))}
 					</select>
@@ -272,6 +399,43 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 									</span>
 								)}
 							</p>
+							<div className="flex gap-2 my-2">
+								<button
+									className="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 text-sm"
+									type="button"
+									onClick={handleBulkAddNew}
+									disabled={
+										bulkCreating ||
+										!matches.some(
+											(m) => m.dbItem === null && m.analysisItem.price > 0,
+										)
+									}
+								>
+									{bulkCreating ? (
+										<>
+											<span className="inline-block animate-spin mr-1">↻</span>
+											Adding...
+										</>
+									) : (
+										"Bulk add all items (apart from discounts)"
+									)}
+								</button>
+								<button
+									className="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 text-sm"
+									onClick={handleUndoBulkAdd}
+									type="button"
+									disabled={bulkDeleting || newlyCreatedItems.length === 0}
+								>
+									{bulkDeleting ? (
+										<>
+											<span className="inline-block animate-spin mr-1">↻</span>
+											Undoing...
+										</>
+									) : (
+										`Undo Added Items (${newlyCreatedItems.length})`
+									)}
+								</button>
+							</div>
 						</div>
 						<div className="overflow-x-auto">
 							<table className="w-full border-collapse">
@@ -294,7 +458,8 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 												className={`border ${isSelected ? "bg-blue-50" : ""}`}
 											>
 												<td className="p-2 border">
-													{analysisItem.name} (€{analysisItem.price})
+													{analysisItem.name} ({currency}
+													{analysisItem.price})
 												</td>
 												<td className="p-2 border">
 													<select
@@ -360,8 +525,8 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 														<option value="ignore">Ignore this item</option>
 														{match?.dbItem && (
 															<option value={match.dbItem.id}>
-																{match.dbItem.name} (€{match.analysisItem.price}
-																)
+																{match.dbItem.name} ({currency}
+																{match.analysisItem.price})
 															</option>
 														)}
 														<option value="new">
@@ -483,6 +648,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 														id: dbItem.id,
 														checked: true,
 														...(selectedPayer && { personId: selectedPayer }),
+														...(selectedTag && { tagId: selectedTag }),
 														receiptId: receipt?.id,
 														price: totalPrice, // Use the summed price
 														checked_at: new Date().toISOString(),
@@ -519,6 +685,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
 									);
 									onClose();
 									setSelectedPayer("");
+									setSelectedTag("");
 
 									// Invalidate items queries after updates
 									queryClient.invalidateQueries({
