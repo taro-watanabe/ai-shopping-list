@@ -433,7 +433,7 @@ export default function Home() {
 	const checkedTotal = calculateTotal(filteredCheckedItems);
 
 	return (
-		<main className="p-4 max-w-md mx-auto">
+		<main className="min-h-screen pt-16 px-4 max-w-4xl mx-auto">
 			<h1 className="text-2xl font-bold mb-4">Shopping List</h1>
 
 			<form

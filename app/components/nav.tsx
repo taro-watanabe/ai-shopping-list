@@ -24,6 +24,12 @@ export function Nav() {
 						>
 							People
 						</Link>
+						<Link
+							href="/archived-items"
+							className="inline-flex items-center px-1 pt-1 text-sm font-medium text-white hover:text-gray-300"
+						>
+							Archived Items
+						</Link>
 					</div>
 				</div>
 			</div>
