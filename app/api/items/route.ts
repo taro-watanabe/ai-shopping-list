@@ -80,16 +80,11 @@ export async function GET(request: Request) {
 			gte(items.checkedAt, sevenDaysAgo.toISOString())
 		)
 	);
-	conditions.push(activeItemsCondition);
-
-	// Build final condition - we always have at least activeItemsCondition
-	const finalCondition = conditions.length === 2 
-		? and(conditions[0], conditions[1])
-		: conditions[0];
-
-	// Apply where clause
-	const finalQuery = query.where(finalCondition);
-
+	if (activeItemsCondition) {
+		conditions.push(activeItemsCondition);
+	}
+	const finalCombinedCondition = and(...conditions);
+	const finalQuery = query.where(finalCombinedCondition);
 	const allItems = await finalQuery;
 
 	return NextResponse.json(allItems);
