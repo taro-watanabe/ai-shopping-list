@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { items, tags, people, receipts } from "@/db/schema";
-import { eq, inArray, and, type SQL, isNotNull } from "drizzle-orm";
+import { eq, inArray, and, or, gte, type SQL, isNotNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { generateEmbedding } from "@/lib/openai";
 
@@ -68,16 +68,27 @@ export async function GET(request: Request) {
 		conditions.push(eq(items.checked, checked === "true"));
 	}
 
-	// Build final condition before applying where clause
-	let finalCondition: SQL | undefined;
-	if (conditions.length === 2) {
-		finalCondition = and(conditions[0], conditions[1]);
-	} else if (conditions.length === 1) {
-		finalCondition = conditions[0];
-	}
+	// Calculate date 7 days ago for active items filter
+	const sevenDaysAgo = new Date();
+	sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-	// Apply where clause only if there are conditions
-	const finalQuery = finalCondition ? query.where(finalCondition) : query;
+	// Always exclude archived items (checked AND checkedAt older than 7 days)
+	const activeItemsCondition = or(
+		eq(items.checked, false),
+		and(
+			eq(items.checked, true),
+			gte(items.checkedAt, sevenDaysAgo.toISOString())
+		)
+	);
+	conditions.push(activeItemsCondition);
+
+	// Build final condition - we always have at least activeItemsCondition
+	const finalCondition = conditions.length === 2 
+		? and(conditions[0], conditions[1])
+		: conditions[0];
+
+	// Apply where clause
+	const finalQuery = query.where(finalCondition);
 
 	const allItems = await finalQuery;
 
