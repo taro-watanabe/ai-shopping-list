@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -32,7 +33,7 @@ interface ApiResponse {
 	totalItems: number;
 }
 
-export default function ArchivedItemsPage() {
+function ArchivedItemsContent() {
 	const searchParams = useSearchParams();
 	const [page, setPage] = useState(Number(searchParams.get("page")) || 1);
 	const currency = process.env.NEXT_PUBLIC_CURRENCY || "€";
@@ -57,7 +58,7 @@ export default function ArchivedItemsPage() {
 	};
 
 	if (isLoading) {
-		return (
+	  return (
 			<div className="min-h-screen pt-16 px-4">
 				<div className="max-w-4xl mx-auto">
 					<h1 className="text-2xl font-bold mb-6">Loading archived items...</h1>
@@ -128,5 +129,13 @@ export default function ArchivedItemsPage() {
 				</div>
 			)}
 		</main>
-	);
+  );
+}
+
+export default function ArchivedItemsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ArchivedItemsContent />
+    </Suspense>
+  );
 }
